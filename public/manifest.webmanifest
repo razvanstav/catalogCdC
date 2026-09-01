@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "Îndrumar — spațiul educațional personal",
+  "short_name": "Îndrumar",
+  "description": "Aplicație pentru profesoară, elevi și părinți: grupe, progres, prezență și comunicare.",
+  "lang": "ro",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#EAE8E3",
+  "theme_color": "#4A77DA",
+  "icons": [
+    {
+      "src": "/assets/images/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

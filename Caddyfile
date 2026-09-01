@@ -1,0 +1,11 @@
+{
+	frankenphp
+}
+
+:8000 {
+	root * public
+	encode zstd gzip
+	php_server {
+		try_files {path} {path}/ index.php
+	}
+}

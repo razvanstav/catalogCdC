@@ -1,0 +1,816 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Repositories\GroupRepository;
+use App\Repositories\StudentRepository;
+use App\Repositories\AttendanceRepository;
+use App\Repositories\AssignmentRepository;
+use App\Repositories\AssessmentRepository;
+use App\Repositories\FeedbackRepository;
+use App\Repositories\AnnouncementRepository;
+use App\Repositories\ConversationRepository;
+use App\Repositories\GoalRepository;
+use App\Repositories\UserRepository;
+use App\Repositories\ReportRepository;
+use App\Services\FamilyService;
+use App\Support\Request;
+use App\Support\Response;
+use App\Support\Session;
+use App\Support\View;
+
+class TeacherController
+{
+    private GroupRepository $groupRepo;
+    private StudentRepository $studentRepo;
+    private AttendanceRepository $attendanceRepo;
+    private AssignmentRepository $assignmentRepo;
+    private AssessmentRepository $assessmentRepo;
+    private FeedbackRepository $feedbackRepo;
+    private AnnouncementRepository $announcementRepo;
+    private ConversationRepository $conversationRepo;
+    private GoalRepository $goalRepo;
+    private UserRepository $userRepo;
+    private ReportRepository $reportRepo;
+    private FamilyService $familyService;
+
+    public function __construct()
+    {
+        $this->groupRepo = new GroupRepository();
+        $this->studentRepo = new StudentRepository();
+        $this->attendanceRepo = new AttendanceRepository();
+        $this->assignmentRepo = new AssignmentRepository();
+        $this->assessmentRepo = new AssessmentRepository();
+        $this->feedbackRepo = new FeedbackRepository();
+        $this->announcementRepo = new AnnouncementRepository();
+        $this->conversationRepo = new ConversationRepository();
+        $this->goalRepo = new GoalRepository();
+        $this->userRepo = new UserRepository();
+        $this->reportRepo = new ReportRepository();
+        $this->familyService = new FamilyService();
+    }
+
+    public function dashboard(): void
+    {
+        $groups = $this->groupRepo->all();
+        $students = $this->studentRepo->all('teacher');
+        $schedules = $this->groupRepo->getSchedules();
+        $lessons = $this->attendanceRepo->getLessons();
+        $recentLessons = $this->attendanceRepo->getRecentChronologicalLessons(6);
+        $currentWeekSchedule = $this->groupRepo->getCurrentWeekSchedule();
+        $assignments = $this->assignmentRepo->all();
+        $feedbacks = $this->feedbackRepo->all();
+
+        View::render('teacher/dashboard', [
+            'groups' => $groups,
+            'students' => $students,
+            'schedules' => $schedules,
+            'lessons' => $lessons,
+            'recentLessons' => $recentLessons,
+            'currentWeekSchedule' => $currentWeekSchedule,
+            'assignments' => $assignments,
+            'feedbacks' => $feedbacks,
+        ]);
+    }
+
+    public function groups(): void
+    {
+        $groups = $this->groupRepo->all();
+        View::render('teacher/groups', ['groups' => $groups]);
+    }
+
+    public function groupDetail(string $id): void
+    {
+        $group = $this->groupRepo->findById($id);
+        if (!$group) Response::notFound();
+
+        $enrolledStudents = $this->studentRepo->getStudentsInGroup($id, 'teacher');
+        $allStudents = $this->studentRepo->all('teacher');
+        $schedules = $this->groupRepo->getSchedules($id);
+        $lessons = $this->attendanceRepo->getLessons($id);
+        $assignments = $this->assignmentRepo->getForGroup($id);
+        $materials = $this->assignmentRepo->getMaterials($id);
+
+        View::render('teacher/group_detail', [
+            'group' => $group,
+            'enrolledStudents' => $enrolledStudents,
+            'allStudents' => $allStudents,
+            'schedules' => $schedules,
+            'lessons' => $lessons,
+            'assignments' => $assignments,
+            'materials' => $materials,
+        ]);
+    }
+
+    public function createGroup(): void
+    {
+        $name = Request::input('name');
+        $type = Request::input('type', 'tutoring_group');
+        $description = Request::input('description');
+        $colorTag = Request::input('color_tag', '#4A77DA');
+
+        if ($name) {
+            $this->groupRepo->create([
+                'name' => $name,
+                'type' => $type,
+                'description' => $description,
+                'color_tag' => $colorTag,
+            ]);
+            Session::flash('success', 'Grupa a fost creată cu succes!');
+        }
+        Response::redirect('/teacher/groups');
+    }
+
+    public function enrollStudent(string $id): void
+    {
+        $studentId = Request::input('student_id');
+        if ($studentId) {
+            $this->groupRepo->enrollStudent($id, $studentId);
+            Session::flash('success', 'Elevul a fost înscris cu succes în grupă!');
+        }
+        Response::redirect("/teacher/groups/$id");
+    }
+
+    public function updateGroup(string $id): void
+    {
+        $name = Request::input('name');
+        $type = Request::input('type', 'tutoring_group');
+        $description = Request::input('description');
+        $colorTag = Request::input('color_tag', '#4A77DA');
+
+        if ($name) {
+            $this->groupRepo->update($id, [
+                'name' => $name,
+                'type' => $type,
+                'description' => $description,
+                'color_tag' => $colorTag,
+            ]);
+            Session::flash('success', 'Grupa a fost actualizată cu succes!');
+        }
+        Response::redirect("/teacher/groups/$id");
+    }
+
+    public function unenrollStudent(string $id): void
+    {
+        $studentId = Request::input('student_id');
+        if ($studentId) {
+            $this->groupRepo->unenrollStudent($id, $studentId);
+            Session::flash('success', 'Elevul a fost scos din această grupă.');
+        }
+        Response::redirect("/teacher/groups/$id");
+    }
+
+    public function students(): void
+    {
+        $students = $this->studentRepo->all('teacher');
+        View::render('teacher/students', ['students' => $students]);
+    }
+
+    public function togglePaid(string $id): void
+    {
+        $this->studentRepo->togglePaid($id);
+        Session::flash('success', 'Starea de plată (PAID) a fost actualizată!');
+        $returnUrl = Request::input('return_url', '/teacher/dashboard');
+        Response::redirect($returnUrl);
+    }
+
+    public function studentDetail(string $id): void
+    {
+        $student = $this->studentRepo->findById($id, 'teacher');
+        if (!$student) Response::notFound();
+
+        $groups = $this->groupRepo->getGroupsForStudent($id);
+        $guardians = $this->studentRepo->getGuardiansForStudent($id);
+        $attendance = $this->attendanceRepo->getForStudent($id);
+        $results = $this->assessmentRepo->getResultsForStudent($id, 'teacher');
+        $feedbacks = $this->feedbackRepo->getForStudent($id);
+        $goals = $this->goalRepo->getForStudent($id);
+
+        View::render('teacher/student_detail', [
+            'student' => $student,
+            'groups' => $groups,
+            'guardians' => $guardians,
+            'attendance' => $attendance,
+            'results' => $results,
+            'feedbacks' => $feedbacks,
+            'goals' => $goals,
+        ]);
+    }
+
+    public function createStudent(): void
+    {
+        $first = Request::input('first_name');
+        $last = Request::input('last_name');
+        $initial = Request::input('father_initial');
+        $email = Request::input('email');
+        $phone = Request::input('phone');
+        $isPaid = Request::input('is_paid', 1);
+        $notes = Request::input('private_notes');
+
+        if ($first && $last) {
+            $this->studentRepo->create([
+                'first_name' => $first,
+                'last_name' => $last,
+                'father_initial' => $initial ? "$initial." : null,
+                'email' => $email,
+                'phone' => $phone,
+                'is_paid' => (int)$isPaid,
+                'private_notes' => $notes,
+            ]);
+            Session::flash('success', 'Elevul a fost înregistrat în catalog!');
+        }
+        Response::redirect('/teacher/students');
+    }
+
+    public function updateStudentNotes(string $id): void
+    {
+        $notes = Request::input('private_notes', '');
+        $this->studentRepo->updatePrivateNotes($id, $notes);
+        Session::flash('success', 'Notița privată a fost salvată cu succes (Strict Confidențial)!');
+        Response::redirect("/teacher/students/$id");
+    }
+
+    public function attendance(): void
+    {
+        $groups = $this->groupRepo->all();
+        $selectedGroupId = Request::input('group_id', $groups[0]['id'] ?? '');
+        $lessons = $this->attendanceRepo->getLessons($selectedGroupId);
+        $selectedLessonId = Request::input('lesson_id', $lessons[0]['id'] ?? '');
+
+        $students = ($selectedLessonId && $selectedGroupId)
+            ? $this->attendanceRepo->getStudentsForLesson($selectedLessonId, $selectedGroupId)
+            : ($selectedGroupId ? $this->studentRepo->getStudentsInGroup($selectedGroupId, 'teacher') : []);
+        $records = $selectedLessonId ? $this->attendanceRepo->getForLesson($selectedLessonId) : [];
+        $allStudents = $this->studentRepo->all('teacher');
+
+        $recordMap = [];
+        foreach ($records as $r) {
+            $recordMap[$r['student_id']] = $r;
+        }
+
+        View::render('teacher/attendance', [
+            'groups' => $groups,
+            'selectedGroupId' => $selectedGroupId,
+            'lessons' => $lessons,
+            'selectedLessonId' => $selectedLessonId,
+            'students' => $students,
+            'allStudents' => $allStudents,
+            'recordMap' => $recordMap,
+        ]);
+    }
+
+    public function addGuestToLesson(): void
+    {
+        $lessonId = Request::input('lesson_id');
+        $groupId = Request::input('group_id');
+        $studentId = Request::input('student_id');
+        $note = Request::input('note', 'Recuperare / Transfer oră');
+
+        if ($lessonId && $studentId) {
+            $this->attendanceRepo->addGuestToLesson($lessonId, $studentId, 'present', $note);
+            Session::flash('success', 'Elevul a fost adăugat strict la această ședință!');
+        }
+        Response::redirect("/teacher/attendance?group_id=$groupId&lesson_id=$lessonId");
+    }
+
+    public function removeGuestFromLesson(): void
+    {
+        $lessonId = Request::input('lesson_id');
+        $groupId = Request::input('group_id');
+        $studentId = Request::input('student_id');
+
+        if ($lessonId && $studentId) {
+            $this->attendanceRepo->removeGuestFromLesson($lessonId, $studentId);
+            Session::flash('success', 'Elevul a fost eliminat din această ședință.');
+        }
+        Response::redirect("/teacher/attendance?group_id=$groupId&lesson_id=$lessonId");
+    }
+
+    public function saveAttendance(): void
+    {
+        $lessonId = Request::input('lesson_id');
+        $statuses = Request::input('status', []);
+        $notes = Request::input('notes', []);
+        $isPaids = Request::input('is_paid', []);
+
+        if ($lessonId && is_array($statuses)) {
+            foreach ($statuses as $studentId => $status) {
+                $note = $notes[$studentId] ?? null;
+                $isPaid = isset($isPaids[$studentId]) ? 1 : 0;
+                $this->attendanceRepo->record($lessonId, $studentId, $status, $note, $isPaid);
+            }
+            Session::flash('success', 'Prezența și statusul de plată pentru această ședință au fost salvate!');
+        }
+
+        $groupId = Request::input('group_id');
+        Response::redirect("/teacher/attendance?group_id=$groupId&lesson_id=$lessonId");
+    }
+
+    public function lessons(): void
+    {
+        $groups = $this->groupRepo->all();
+        $lessons = $this->attendanceRepo->getLessons();
+        View::render('teacher/lessons', ['groups' => $groups, 'lessons' => $lessons]);
+    }
+
+    public function createLesson(): void
+    {
+        $groupId = Request::input('group_id');
+        $title = Request::input('title');
+        $date = Request::input('lesson_date');
+        $start = Request::input('start_time');
+        $end = Request::input('end_time');
+        $notes = Request::input('lesson_notes');
+
+        if ($groupId && $title) {
+            $this->attendanceRepo->createLesson([
+                'group_id' => $groupId,
+                'title' => $title,
+                'lesson_date' => $date,
+                'start_time' => $start,
+                'end_time' => $end,
+                'lesson_notes' => $notes,
+            ]);
+            Session::flash('success', 'Ședința a fost programată în calendar!');
+        }
+        Response::redirect('/teacher/lessons');
+    }
+
+    public function assignments(): void
+    {
+        $groups = $this->groupRepo->all();
+        $assignments = $this->assignmentRepo->all();
+        $materials = $this->assignmentRepo->getMaterials();
+
+        $submissionsMap = [];
+        foreach ($assignments as $asg) {
+            $submissionsMap[$asg['id']] = $this->assignmentRepo->getSubmissionsForAssignment($asg['id']);
+        }
+
+        View::render('teacher/assignments', [
+            'groups' => $groups,
+            'assignments' => $assignments,
+            'materials' => $materials,
+            'submissionsMap' => $submissionsMap,
+        ]);
+    }
+
+    public function createAssignment(): void
+    {
+        $groupId = Request::input('group_id');
+        $title = Request::input('title');
+        $desc = Request::input('description');
+        $due = Request::input('due_date');
+
+        $attachmentUrl = null;
+        if (!empty($_FILES['attachment']['tmp_name']) && is_uploaded_file($_FILES['attachment']['tmp_name'])) {
+            $uploadDir = APP_ROOT . '/public/uploads/assignments/';
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0777, true);
+            }
+            $ext = strtolower(pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION));
+            $safeName = 'asg_' . bin2hex(random_bytes(6)) . '.' . $ext;
+            if (move_uploaded_file($_FILES['attachment']['tmp_name'], $uploadDir . $safeName)) {
+                $attachmentUrl = '/uploads/assignments/' . $safeName;
+            }
+        }
+
+        if ($groupId && $title) {
+            $this->assignmentRepo->create([
+                'group_id' => $groupId,
+                'title' => $title,
+                'description' => $desc,
+                'attachment_url' => $attachmentUrl,
+                'due_date' => $due,
+            ]);
+            Session::flash('success', 'Tema a fost distribuită cu succes elevilor!');
+        }
+        Response::redirect('/teacher/assignments');
+    }
+
+    public function createMaterial(): void
+    {
+        $groupId = Request::input('group_id');
+        $title = Request::input('title');
+        $url = Request::input('url');
+        $type = Request::input('file_type', 'pdf');
+
+        if ($groupId && $title) {
+            $this->assignmentRepo->createMaterial([
+                'group_id' => $groupId,
+                'title' => $title,
+                'url' => $url,
+                'file_type' => $type,
+            ]);
+            Session::flash('success', 'Materialul didactic a fost adăugat!');
+        }
+        Response::redirect('/teacher/assignments');
+    }
+
+    public function assessments(): void
+    {
+        $groups = $this->groupRepo->all();
+        $selectedGroupId = Request::input('group_id', $groups[0]['id'] ?? '');
+        $assessments = $selectedGroupId ? $this->assessmentRepo->getForGroup($selectedGroupId) : [];
+
+        // Auto-create assessment if none exists for this group
+        if (empty($assessments) && !empty($selectedGroupId)) {
+            $defaultAsmId = $this->assessmentRepo->create([
+                'group_id' => $selectedGroupId,
+                'title' => 'Evaluare & Note Curs ' . date('Y'),
+                'assessment_type' => 'test',
+                'max_score' => 5.0,
+                'assessment_date' => date('Y-m-d'),
+            ]);
+            $assessments = $this->assessmentRepo->getForGroup($selectedGroupId);
+            $selectedAssessmentId = $defaultAsmId;
+        } else {
+            $requestedAsmId = Request::input('assessment_id');
+            $validIds = array_column($assessments, 'id');
+            if ($requestedAsmId && in_array($requestedAsmId, $validIds, true)) {
+                $selectedAssessmentId = $requestedAsmId;
+            } else {
+                $selectedAssessmentId = $assessments[0]['id'] ?? '';
+            }
+        }
+
+        $students = $selectedGroupId ? $this->studentRepo->getStudentsInGroup($selectedGroupId, 'teacher') : [];
+        $results = $selectedAssessmentId ? $this->assessmentRepo->getResultsForAssessment($selectedAssessmentId, 'teacher') : [];
+
+        $resultMap = [];
+        foreach ($results as $r) {
+            $resultMap[$r['student_id']] = $r;
+        }
+
+        View::render('teacher/assessments', [
+            'groups' => $groups,
+            'selectedGroupId' => $selectedGroupId,
+            'assessments' => $assessments,
+            'selectedAssessmentId' => $selectedAssessmentId,
+            'students' => $students,
+            'resultMap' => $resultMap,
+        ]);
+    }
+
+    public function createAssessment(): void
+    {
+        $groupId = Request::input('group_id');
+        $title = Request::input('title');
+        $type = Request::input('assessment_type', 'test');
+        $maxScore = (float)Request::input('max_score', 5.0);
+        $date = Request::input('assessment_date', date('Y-m-d'));
+
+        if ($groupId && $title) {
+            $id = $this->assessmentRepo->create([
+                'group_id' => $groupId,
+                'title' => $title,
+                'assessment_type' => $type,
+                'max_score' => $maxScore,
+                'assessment_date' => $date,
+            ]);
+            Session::flash('success', 'Evaluarea a fost creată!');
+            Response::redirect("/teacher/assessments?group_id=$groupId&assessment_id=$id");
+            return;
+        }
+        Response::redirect('/teacher/assessments');
+    }
+
+    public function saveAssessmentResults(): void
+    {
+        $assessmentId = Request::input('assessment_id');
+        $groupId = Request::input('group_id');
+        $scores = Request::input('scores', []);
+        $feedbacks = Request::input('published_feedback', []);
+        $privateNotes = Request::input('private_notes', []);
+
+        if (empty($assessmentId) && !empty($groupId)) {
+            $assessmentId = $this->assessmentRepo->create([
+                'group_id' => $groupId,
+                'title' => 'Evaluare & Note Curs ' . date('Y'),
+                'assessment_type' => 'test',
+                'max_score' => 5.0,
+                'assessment_date' => date('Y-m-d'),
+            ]);
+        }
+
+        if ($assessmentId) {
+            $students = $groupId ? $this->studentRepo->getStudentsInGroup($groupId, 'teacher') : [];
+            if (empty($students)) {
+                $allKeys = array_unique(array_merge(array_keys($scores), array_keys($feedbacks), array_keys($privateNotes)));
+                $students = array_map(fn($id) => ['id' => $id], $allKeys);
+            }
+
+            foreach ($students as $student) {
+                $sId = $student['id'];
+                $scoreVal = $scores[$sId] ?? null;
+                $fb = isset($feedbacks[$sId]) && trim($feedbacks[$sId]) !== '' ? trim($feedbacks[$sId]) : null;
+                $pn = isset($privateNotes[$sId]) && trim($privateNotes[$sId]) !== '' ? trim($privateNotes[$sId]) : null;
+
+                if ($scoreVal !== '' && $scoreVal !== null) {
+                    $score = (float)$scoreVal;
+                    $this->assessmentRepo->saveResult($assessmentId, $sId, $score, $fb, $pn, true);
+                } elseif ($fb !== null || $pn !== null) {
+                    $existing = \App\Support\Database::queryOne("SELECT score FROM assessment_results WHERE assessment_id = ? AND student_id = ?", [$assessmentId, $sId]);
+                    $score = $existing ? (float)$existing['score'] : 5.0;
+                    $this->assessmentRepo->saveResult($assessmentId, $sId, $score, $fb, $pn, true);
+                }
+            }
+            Session::flash('success', 'Notele și aprecierile elevilor au fost salvate cu succes!');
+        }
+
+        Response::redirect("/teacher/assessments?group_id=$groupId&assessment_id=$assessmentId");
+    }
+
+    public function feedback(): void
+    {
+        $students = $this->studentRepo->all('teacher');
+        $feedbacks = $this->feedbackRepo->all();
+        View::render('teacher/feedback', ['students' => $students, 'feedbacks' => $feedbacks]);
+    }
+
+    public function createFeedback(): void
+    {
+        $studentId = Request::input('student_id');
+        $content = Request::input('content');
+        $category = Request::input('category', 'progress');
+
+        if ($studentId && $content) {
+            $this->feedbackRepo->create($studentId, $content, $category);
+            Session::flash('success', 'Aprecierea a fost publicată către familie!');
+        }
+        Response::redirect('/teacher/feedback');
+    }
+
+    public function announcements(): void
+    {
+        $groups = $this->groupRepo->all();
+        $announcements = $this->announcementRepo->all();
+        View::render('teacher/announcements', ['groups' => $groups, 'announcements' => $announcements]);
+    }
+
+    public function createAnnouncement(): void
+    {
+        $groupId = Request::input('group_id') ?: null;
+        $title = Request::input('title');
+        $content = Request::input('content');
+
+        if ($title && $content) {
+            $this->announcementRepo->create($title, $content, $groupId);
+            Session::flash('success', 'Anunțul a fost transmis!');
+        }
+        Response::redirect('/teacher/announcements');
+    }
+
+    public function conversations(): void
+    {
+        $user = Session::user();
+        $teacherId = $user['teacher_id'] ?? 'tch_radu_teodorescu';
+        $conversations = $this->conversationRepo->getForTeacher($teacherId);
+        $allGuardians = $this->conversationRepo->getAllGuardiansWithStudents();
+
+        $selectedConvId = Request::input('conv_id', $conversations[0]['id'] ?? '');
+        $activeConv = null;
+        foreach ($conversations as $c) {
+            if ($c['id'] === $selectedConvId) {
+                $activeConv = $c;
+                break;
+            }
+        }
+        if (!$activeConv && count($conversations) > 0) {
+            $activeConv = $conversations[0];
+        }
+
+        View::render('teacher/conversations', [
+            'conversations' => $conversations,
+            'activeConv' => $activeConv,
+            'allGuardians' => $allGuardians,
+        ]);
+    }
+
+    public function startConversation(): void
+    {
+        $user = Session::user();
+        $teacherId = $user['teacher_id'] ?? 'tch_radu_teodorescu';
+        $guardianId = Request::input('guardian_id');
+        $studentId = Request::input('student_id');
+        $content = Request::input('content');
+
+        if ($guardianId) {
+            $convId = $this->conversationRepo->findOrCreateConversation($teacherId, $guardianId, $studentId ?: null);
+            if (!empty($content)) {
+                $this->conversationRepo->sendMessage($convId, 'teacher', $user['id'], $content);
+                Session::flash('success', 'Mesajul a fost transmis părintelui!');
+            }
+            Response::redirect("/teacher/conversations?conv_id=$convId");
+            return;
+        }
+
+        Session::flash('error', 'Selectează un părinte din listă.');
+        Response::redirect('/teacher/conversations');
+    }
+
+    public function sendMessage(): void
+    {
+        $convId = Request::input('conversation_id');
+        $content = Request::input('content');
+        $user = Session::user();
+
+        if ($convId && $content) {
+            $this->conversationRepo->sendMessage($convId, 'teacher', $user['id'], $content);
+        }
+        Response::redirect("/teacher/conversations?conv_id=$convId");
+    }
+
+    public function calendar(): void
+    {
+        $groups = $this->groupRepo->all();
+        $schedules = $this->groupRepo->getSchedules();
+        View::render('teacher/calendar', ['groups' => $groups, 'schedules' => $schedules]);
+    }
+
+    public function reports(): void
+    {
+        $groups = $this->groupRepo->all();
+        $students = $this->studentRepo->all('teacher');
+        $availableYears = $this->reportRepo->getAvailableYears();
+
+        $activeTab = Request::input('tab', 'annual');
+        $selectedYear = Request::input('year', date('Y'));
+        $annualOverview = $this->reportRepo->getAnnualOverview($selectedYear);
+
+        $selectedAsmYear = Request::input('asm_year', 'all');
+        $selectedAsmGroup = Request::input('asm_group_id', '');
+        $assessmentHistory = $this->reportRepo->getAssessmentHistory($selectedAsmYear, $selectedAsmGroup ?: null);
+
+        $startDate = Request::input('start_date', date('Y-01-01'));
+        $endDate = Request::input('end_date', date('Y-12-31'));
+        $attGroup = Request::input('att_group_id', '');
+        $attendanceIntervalReport = $this->reportRepo->getAttendanceIntervalReport($startDate, $endDate, $attGroup ?: null);
+
+        $selectedStudentId = Request::input('student_id', $students[0]['id'] ?? '');
+        $digest = $selectedStudentId ? $this->familyService->getWeeklyDigest($selectedStudentId, 'teacher') : null;
+
+        View::render('teacher/reports', [
+            'groups' => $groups,
+            'students' => $students,
+            'availableYears' => $availableYears,
+            'activeTab' => $activeTab,
+            'selectedYear' => $selectedYear,
+            'annualOverview' => $annualOverview,
+            'selectedAsmYear' => $selectedAsmYear,
+            'selectedAsmGroup' => $selectedAsmGroup,
+            'assessmentHistory' => $assessmentHistory,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'attGroup' => $attGroup,
+            'attendanceIntervalReport' => $attendanceIntervalReport,
+            'selectedStudentId' => $selectedStudentId,
+            'digest' => $digest,
+        ]);
+    }
+
+    public function settings(): void
+    {
+        $user = Session::user();
+        $teacher = $this->userRepo->getTeacherProfile($user['id']);
+        $allUsers = $this->userRepo->getAllUsers();
+        $groups = $this->groupRepo->all();
+        $students = $this->studentRepo->all('teacher');
+
+        View::render('teacher/settings', [
+            'teacher' => $teacher,
+            'allUsers' => $allUsers,
+            'groups' => $groups,
+            'students' => $students,
+        ]);
+    }
+
+    public function updateSettings(): void
+    {
+        $user = Session::user();
+        $teacher = $this->userRepo->getTeacherProfile($user['id']);
+        if ($teacher) {
+            $title = Request::input('title', $teacher['title']);
+            $phone = Request::input('phone', $teacher['phone']);
+            $bio = Request::input('bio', $teacher['bio']);
+            $this->userRepo->updateTeacherBio($teacher['id'], $title, $phone, $bio);
+            Session::flash('success', 'Profilul didactic a fost actualizat cu succes!');
+        }
+        Response::redirect('/teacher/settings');
+    }
+
+    public function createStudentAccount(): void
+    {
+        $firstName = Request::input('first_name');
+        $lastName = Request::input('last_name');
+        $email = Request::input('email');
+        $password = Request::input('password', 'parola123');
+        $groupId = Request::input('group_id');
+        $phone = Request::input('phone');
+
+        if ($firstName && $lastName && $email) {
+            $this->userRepo->createStudentUser([
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email,
+                'password' => $password,
+                'group_id' => $groupId,
+                'phone' => $phone,
+            ]);
+            Session::flash('success', "Contul de elev pentru {$firstName} {$lastName} a fost creat cu succes!");
+        }
+        Response::redirect('/teacher/settings#accounts');
+    }
+
+    public function createParentAccount(): void
+    {
+        $firstName = Request::input('first_name');
+        $lastName = Request::input('last_name');
+        $email = Request::input('email');
+        $password = Request::input('password', 'parola123');
+        $studentId = Request::input('student_id');
+        $phone = Request::input('phone');
+        $relationship = Request::input('relationship', 'legal_guardian');
+
+        if ($firstName && $lastName && $email) {
+            $this->userRepo->createParentUser([
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email,
+                'password' => $password,
+                'student_id' => $studentId,
+                'phone' => $phone,
+                'relationship' => $relationship,
+            ]);
+            Session::flash('success', "Contul de părinte pentru {$firstName} {$lastName} a fost creat cu succes!");
+        }
+        Response::redirect('/teacher/settings#accounts');
+    }
+
+    public function resetPassword(): void
+    {
+        $userId = Request::input('user_id');
+        $newPassword = Request::input('new_password', 'parola123');
+
+        if ($userId && $newPassword) {
+            $this->userRepo->resetPassword($userId, $newPassword);
+            Session::flash('success', "Parola contului a fost resetată la: {$newPassword}");
+        }
+        Response::redirect('/teacher/settings#accounts');
+    }
+
+    public function deleteUser(): void
+    {
+        $userId = Request::input('user_id');
+        if ($userId) {
+            $this->userRepo->deleteUserAccount($userId);
+            Session::flash('success', 'Contul a fost șters din sistem.');
+        }
+        Response::redirect('/teacher/settings#accounts');
+    }
+
+    public function toggleVacationMode(): void
+    {
+        $message = Request::input('vacation_message');
+        $isVacation = \App\Support\Settings::toggleVacationMode(null, $message);
+        if ($isVacation) {
+            Session::flash('success', '🌴 Modul Vacanță a fost activat! Ședințele recurente și activitatea sunt în pauză.');
+        } else {
+            Session::flash('success', '▶️ Modul Vacanță a fost dezactivat. Cursurile s-au reluat!');
+        }
+        $returnUrl = Request::input('return_url', '/teacher/dashboard');
+        Response::redirect($returnUrl);
+    }
+
+    public function addSchedule(string $groupId): void
+    {
+        $dayOfWeek = (int)Request::input('day_of_week', 1);
+        $startTime = Request::input('start_time', '16:00');
+        $endTime = Request::input('end_time', '18:00');
+        $room = Request::input('room_or_link', 'Laborator didactic');
+
+        if ($groupId && $startTime && $endTime) {
+            $this->groupRepo->addSchedule($groupId, $dayOfWeek, $startTime, $endTime, $room);
+            $this->groupRepo->generateRecurringLessons($groupId, 4);
+            Session::flash('success', 'Programul săptămânal recurent a fost salvat și ședințele au fost generate automat!');
+        }
+        Response::redirect("/teacher/groups/$groupId");
+    }
+
+    public function deleteSchedule(string $groupId, string $scheduleId): void
+    {
+        if ($scheduleId) {
+            $this->groupRepo->deleteSchedule($scheduleId);
+            Session::flash('success', 'Intervalul de orar a fost șters din grupă.');
+        }
+        Response::redirect("/teacher/groups/$groupId");
+    }
+
+    public function generateRecurringLessons(string $groupId): void
+    {
+        $weeks = (int)Request::input('weeks', 4);
+        $count = $this->groupRepo->generateRecurringLessons($groupId, $weeks);
+        Session::flash('success', "Au fost generate {$count} ședințe recurente pentru următoarele {$weeks} săptămâni!");
+        Response::redirect("/teacher/groups/$groupId");
+    }
+}

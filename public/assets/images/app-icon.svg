@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Îndrumar</title>
+  <desc id="desc">Semn geometric albastru cu o carte deschisă și un punct verde.</desc>
+  <defs>
+    <linearGradient id="bg" x1="72" y1="54" x2="430" y2="454" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7f9ce9"/>
+      <stop offset="1" stop-color="#365faf"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="128" fill="url(#bg)"/>
+  <path d="M122 156c58-9 104 5 134 38v181c-30-33-76-47-134-38V156Z" fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M390 156c-58-9-104 5-134 38v181c30-33 76-47 134-38V156Z" fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M256 194v181" stroke="#fff" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="389" cy="122" r="38" fill="#8fd0ab" stroke="#fff" stroke-width="14"/>
+</svg>
