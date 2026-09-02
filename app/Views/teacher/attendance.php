@@ -7,13 +7,13 @@ $week = $week ?? (new \App\Repositories\GroupRepository())->getWeekCalendar($sel
 ?>
 <header class="page-heading">
   <div class="page-heading__copy">
-    <div class="page-kicker"><span class="badge badge--sage">Tab 4 • Ședințe</span></div>
+    <div class="page-kicker"><span class="badge badge--sage">Ședințe & Prezență</span></div>
     <h1 class="page-title">Ședințe & Prezență</h1>
     <p class="page-subtitle">Ședințele grupei din săptămâna selectată. Bifează prezența (implicit Prezent) și plata ședinței.</p>
   </div>
   <div class="page-actions">
     <?php if ($selectedLessonId): ?>
-      <a href="/teacher/assessments?lesson_id=<?= e($selectedLessonId) ?>" class="btn btn--outline">⭐ Evaluează această ședință (Tab 5)</a>
+      <a href="/teacher/assessments?lesson_id=<?= e($selectedLessonId) ?>" class="btn btn--outline">⭐ Evaluează această ședință</a>
       <button type="button" class="btn btn--primary" data-modal-open="modal-add-guest">+ Elev la recuperare</button>
     <?php endif; ?>
     <button type="button" class="btn btn--outline" data-mark-all-present>Toți prezenți</button>
@@ -154,7 +154,7 @@ $week = $week ?? (new \App\Repositories\GroupRepository())->getWeekCalendar($sel
       <p class="empty-state__text">Grupa nu are nicio oră programată în intervalul <?= e($week['formatted_range']) ?>. Folosește butoanele de sus pentru a naviga între săptămâni sau verifică orarul recurent.</p>
       <div class="empty-state__actions">
         <a href="/teacher/attendance?group_id=<?= e($selectedGroupId) ?>&date=today" class="btn btn--sage">Mergi la Săptămâna curentă</a>
-        <a href="/teacher/calendar?date=<?= e($week['sunday_date']) ?>" class="btn btn--outline">Deschide Orar (Tab 3)</a>
+        <a href="/teacher/calendar?date=<?= e($week['sunday_date']) ?>" class="btn btn--outline">Deschide Orarul</a>
       </div>
     </div>
   </div>

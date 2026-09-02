@@ -28,11 +28,11 @@ $icon = static function (string $name) use ($icons): string {
 
 $teacherNav = [
   ['/teacher/dashboard', 'home', 'Panou principal'],
-  ['/teacher/students', 'groups', '1. Elevi'],
-  ['/teacher/groups', 'grid', '2. Grupe'],
-  ['/teacher/calendar', 'clock', '3. Orar'],
-  ['/teacher/attendance', 'attendance', '4. Ședințe'],
-  ['/teacher/assessments', 'result', '5. Evaluări'],
+  ['/teacher/students', 'groups', 'Elevi'],
+  ['/teacher/groups', 'grid', 'Grupe'],
+  ['/teacher/calendar', 'clock', 'Orar'],
+  ['/teacher/attendance', 'attendance', 'Ședințe'],
+  ['/teacher/assessments', 'result', 'Evaluări'],
   ['/teacher/assignments', 'document', 'Teme & Materiale'],
   ['/teacher/conversations', 'chat', 'Conversații'],
   ['/teacher/reports', 'reports', 'Rapoarte & Istoric'],

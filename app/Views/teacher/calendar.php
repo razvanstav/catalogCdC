@@ -4,9 +4,9 @@ $week = $week ?? (new \App\Repositories\GroupRepository())->getWeekCalendar('tod
 ?>
 <header class="page-heading">
   <div class="page-heading__copy">
-    <div class="page-kicker"><span class="badge badge--brand">Tab 3 • Orar</span></div>
+    <div class="page-kicker"><span class="badge badge--brand">Planificare & Orar</span></div>
     <h1 class="page-title">Orar săptămânal (Duminică – Sâmbătă)</h1>
-    <p class="page-subtitle">Săptămâna în curs cu instanțierea automată a ședințelor recurente. Apasă pe orice oră pentru a consemna prezența și plățile în Tabul 4 (Ședințe).</p>
+    <p class="page-subtitle">Săptămâna în curs cu instanțierea automată a ședințelor recurente. Apasă pe orice oră pentru a consemna prezența și plățile în secțiunea Ședințe.</p>
   </div>
   <div class="page-actions">
     <button type="button" class="btn btn--primary" data-modal-open="modal-add-calendar-schedule">＋ Adaugă oră recurentă</button>

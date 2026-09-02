@@ -1,7 +1,7 @@
 <?php $title = 'Evaluări și rezultate'; ?>
 <header class="page-heading">
   <div class="page-heading__copy">
-    <div class="page-kicker"><span class="badge badge--brand">Tab 5 • Evaluări</span></div>
+    <div class="page-kicker"><span class="badge badge--brand">Evaluări & Note</span></div>
     <h1 class="page-title">Evaluări & Note (1–5)</h1>
     <p class="page-subtitle">Evaluează elevii în cadrul ședințelor avute. Alege ședința din ziua respectivă, notează de la 1 la 5 și trimite feedback rapid.</p>
   </div>
