@@ -75,7 +75,14 @@
           <select id="guardian_id" name="guardian_id" class="form-control">
             <option value="">-- Alege un părinte existent sau completează mai jos --</option>
             <?php foreach (($guardians ?? []) as $g): ?>
-              <option value="<?= e($g['id']) ?>"><?= e($g['first_name'] . ' ' . $g['last_name']) ?> (<?= e($g['phone'] ?: $g['email']) ?>)</option>
+              <?php
+              $gid = $g['id'] ?? $g['guardian_id'] ?? '';
+              $gFirst = $g['first_name'] ?? $g['guardian_first_name'] ?? '';
+              $gLast = $g['last_name'] ?? $g['guardian_last_name'] ?? '';
+              $gName = trim($gFirst . ' ' . $gLast);
+              $gContact = $g['phone'] ?? $g['guardian_phone'] ?? $g['email'] ?? $g['guardian_email'] ?? '';
+              ?>
+              <option value="<?= e($gid) ?>"><?= e($gName) ?><?= $gContact ? ' (' . e($gContact) . ')' : '' ?></option>
             <?php endforeach; ?>
           </select>
         </div>

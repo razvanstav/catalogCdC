@@ -197,4 +197,13 @@ class UserRepository
             [$title, $phone, $bio, $now, $teacherId]
         );
     }
+
+    public function getAllGuardians(): array
+    {
+        return Database::query("
+            SELECT id, first_name, last_name, phone, email
+            FROM guardian_profiles
+            ORDER BY first_name ASC, last_name ASC
+        ");
+    }
 }

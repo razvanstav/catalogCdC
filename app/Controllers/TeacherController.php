@@ -167,7 +167,7 @@ class TeacherController
     public function students(): void
     {
         $students = $this->studentRepo->all('teacher');
-        $guardians = $this->conversationRepo->getAllGuardiansWithStudents();
+        $guardians = $this->userRepo->getAllGuardians();
         $groups = $this->groupRepo->all();
         View::render('teacher/students', [
             'students' => $students,
