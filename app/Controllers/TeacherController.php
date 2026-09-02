@@ -352,15 +352,27 @@ class TeacherController
     public function attendance(): void
     {
         $groups = $this->groupRepo->all();
-        $selectedLessonId = Request::input('lesson_id');
         $selectedGroupId = Request::input('group_id');
+        $selectedLessonId = Request::input('lesson_id');
         $date = Request::input('date', 'today');
 
+        // Check if selectedLessonId is valid and belongs to the selected group
         if ($selectedLessonId) {
             $lesson = \App\Support\Database::queryOne("SELECT * FROM lessons WHERE id = ?", [$selectedLessonId]);
             if ($lesson) {
-                $selectedGroupId = $lesson['group_id'];
-                $date = $lesson['lesson_date'];
+                if (!empty($selectedGroupId)) {
+                    if ($lesson['group_id'] !== $selectedGroupId) {
+                        // Group was changed by user, discard previous lesson ID!
+                        $selectedLessonId = null;
+                    } else {
+                        $date = $lesson['lesson_date'];
+                    }
+                } else {
+                    $selectedGroupId = $lesson['group_id'];
+                    $date = $lesson['lesson_date'];
+                }
+            } else {
+                $selectedLessonId = null;
             }
         }
 

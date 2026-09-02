@@ -37,17 +37,21 @@ $week = $week ?? (new \App\Repositories\GroupRepository())->getWeekCalendar($sel
     </form>
   </div>
 
-  <form action="/teacher/attendance" method="GET" class="form-grid attendance-filters">
-    <input type="hidden" name="date" value="<?= e($week['sunday_date']) ?>">
-    <div class="form-group">
+  <div class="form-grid attendance-filters">
+    <form action="/teacher/attendance" method="GET" class="form-group">
+      <input type="hidden" name="date" value="<?= e($week['sunday_date']) ?>">
       <label class="form-label" for="group_id">Grupă</label>
       <select id="group_id" name="group_id" class="form-control" data-submit-on-change>
         <?php foreach ($groups as $group): ?>
           <option value="<?= e($group['id']) ?>" <?= $group['id'] === $selectedGroupId ? 'selected' : '' ?>><?= e($group['name']) ?></option>
         <?php endforeach; ?>
       </select>
-    </div>
-    <div class="form-group">
+      <noscript><button type="submit" class="btn btn--outline btn--sm">Schimbă grupa</button></noscript>
+    </form>
+
+    <form action="/teacher/attendance" method="GET" class="form-group">
+      <input type="hidden" name="date" value="<?= e($week['sunday_date']) ?>">
+      <input type="hidden" name="group_id" value="<?= e($selectedGroupId) ?>">
       <label class="form-label" for="lesson_id">Ședință din această săptămână (<?= count($lessons) ?> disponibile)</label>
       <select id="lesson_id" name="lesson_id" class="form-control" data-submit-on-change>
         <?php foreach ($lessons as $lesson): ?>
@@ -59,8 +63,9 @@ $week = $week ?? (new \App\Repositories\GroupRepository())->getWeekCalendar($sel
           <option value="">Nicio ședință în săptămâna <?= e($week['formatted_range']) ?></option>
         <?php endif; ?>
       </select>
-    </div>
-  </form>
+      <noscript><button type="submit" class="btn btn--outline btn--sm">Selectează ședința</button></noscript>
+    </form>
+  </div>
 </section>
 
 <?php if ($selectedLessonId): ?>
