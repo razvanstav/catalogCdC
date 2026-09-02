@@ -354,11 +354,13 @@ class TeacherController
         $groups = $this->groupRepo->all();
         $selectedLessonId = Request::input('lesson_id');
         $selectedGroupId = Request::input('group_id');
+        $date = Request::input('date', 'today');
 
         if ($selectedLessonId) {
             $lesson = \App\Support\Database::queryOne("SELECT * FROM lessons WHERE id = ?", [$selectedLessonId]);
             if ($lesson) {
                 $selectedGroupId = $lesson['group_id'];
+                $date = $lesson['lesson_date'];
             }
         }
 
@@ -366,9 +368,15 @@ class TeacherController
             $selectedGroupId = $groups[0]['id'] ?? '';
         }
 
-        $lessons = $this->attendanceRepo->getLessons($selectedGroupId);
-        if (empty($selectedLessonId)) {
-            $selectedLessonId = $lessons[0]['id'] ?? '';
+        $week = $this->groupRepo->getWeekCalendar($date);
+
+        $lessons = $selectedGroupId
+            ? $this->attendanceRepo->getLessonsForGroupInWeek($selectedGroupId, $week['sunday_date'], $week['saturday_date'])
+            : [];
+
+        $lessonIdsInWeek = array_column($lessons, 'id');
+        if (empty($selectedLessonId) || !in_array($selectedLessonId, $lessonIdsInWeek, true)) {
+            $selectedLessonId = $lessons[0]['id'] ?? null;
         }
 
         $currentLesson = $selectedLessonId ? \App\Support\Database::queryOne("SELECT * FROM lessons WHERE id = ?", [$selectedLessonId]) : null;
@@ -387,6 +395,8 @@ class TeacherController
         View::render('teacher/attendance', [
             'groups' => $groups,
             'selectedGroupId' => $selectedGroupId,
+            'week' => $week,
+            'selectedDate' => $date,
             'lessons' => $lessons,
             'selectedLessonId' => $selectedLessonId,
             'currentLesson' => $currentLesson,
@@ -401,13 +411,14 @@ class TeacherController
         $lessonId = Request::input('lesson_id');
         $groupId = Request::input('group_id');
         $studentId = Request::input('student_id');
+        $date = Request::input('date', 'today');
         $note = Request::input('note', 'Recuperare / Transfer oră');
 
         if ($lessonId && $studentId) {
             $this->attendanceRepo->addGuestToLesson($lessonId, $studentId, 'present', $note);
             Session::flash('success', 'Elevul a fost adăugat strict la această ședință!');
         }
-        Response::redirect("/teacher/attendance?group_id=$groupId&lesson_id=$lessonId");
+        Response::redirect("/teacher/attendance?group_id=$groupId&lesson_id=$lessonId&date=$date");
     }
 
     public function removeGuestFromLesson(): void
@@ -415,17 +426,20 @@ class TeacherController
         $lessonId = Request::input('lesson_id');
         $groupId = Request::input('group_id');
         $studentId = Request::input('student_id');
+        $date = Request::input('date', 'today');
 
         if ($lessonId && $studentId) {
             $this->attendanceRepo->removeGuestFromLesson($lessonId, $studentId);
             Session::flash('success', 'Elevul a fost eliminat din această ședință.');
         }
-        Response::redirect("/teacher/attendance?group_id=$groupId&lesson_id=$lessonId");
+        Response::redirect("/teacher/attendance?group_id=$groupId&lesson_id=$lessonId&date=$date");
     }
 
     public function saveAttendance(): void
     {
         $lessonId = Request::input('lesson_id');
+        $groupId = Request::input('group_id');
+        $date = Request::input('date', 'today');
         $statuses = Request::input('status', []);
         $notes = Request::input('notes', []);
         $isPaids = Request::input('is_paid', []);
@@ -439,8 +453,7 @@ class TeacherController
             Session::flash('success', 'Prezența și statusul de plată pentru această ședință au fost salvate!');
         }
 
-        $groupId = Request::input('group_id');
-        Response::redirect("/teacher/attendance?group_id=$groupId&lesson_id=$lessonId");
+        Response::redirect("/teacher/attendance?group_id=$groupId&lesson_id=$lessonId&date=$date");
     }
 
     public function lessons(): void

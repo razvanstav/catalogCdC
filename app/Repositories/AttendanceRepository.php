@@ -113,6 +113,17 @@ class AttendanceRepository
         ");
     }
 
+    public function getLessonsForGroupInWeek(string $groupId, string $startDate, string $endDate): array
+    {
+        return Database::query("
+            SELECT l.*, g.name as group_name, g.color_tag as group_color
+            FROM lessons l
+            INNER JOIN groups g ON l.group_id = g.id
+            WHERE l.group_id = ? AND l.lesson_date >= ? AND l.lesson_date <= ?
+            ORDER BY l.lesson_date ASC, l.start_time ASC
+        ", [$groupId, $startDate, $endDate]);
+    }
+
     public function getRecentChronologicalLessons(int $limit = 6): array
     {
         $today = date('Y-m-d');
