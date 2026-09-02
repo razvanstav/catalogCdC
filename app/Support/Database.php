@@ -107,6 +107,22 @@ class Database
                 )
             ");
         } catch (\Throwable $ignored) {}
+
+        try {
+            $pdo->query("SELECT lesson_id FROM assessments LIMIT 1");
+        } catch (\Throwable $e) {
+            try {
+                $pdo->exec("ALTER TABLE assessments ADD COLUMN lesson_id TEXT");
+            } catch (\Throwable $ignored) {}
+        }
+
+        try {
+            $pdo->query("SELECT username FROM users LIMIT 1");
+        } catch (\Throwable $e) {
+            try {
+                $pdo->exec("ALTER TABLE users ADD COLUMN username TEXT");
+            } catch (\Throwable $ignored) {}
+        }
     }
 
     public static function query(string $sql, array $params = []): array
@@ -281,6 +297,7 @@ class Database
         CREATE TABLE IF NOT EXISTS assessments (
             id TEXT PRIMARY KEY,
             group_id TEXT NOT NULL,
+            lesson_id TEXT,
             title TEXT NOT NULL,
             assessment_type TEXT NOT NULL,
             max_score REAL DEFAULT 10.0,
@@ -340,6 +357,13 @@ class Database
         );
         ";
         $pdo->exec($schema);
+
+        try {
+            $pdo->exec("ALTER TABLE assessments ADD COLUMN lesson_id TEXT");
+        } catch (\Throwable $e) {}
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN username TEXT");
+        } catch (\Throwable $e) {}
         
         // Seed demo data immediately
         \Database\Seeds\DemoSeeder::seed($pdo);

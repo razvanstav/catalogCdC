@@ -8,7 +8,15 @@ class UserRepository
 {
     public function findByEmail(string $email): ?array
     {
-        return Database::queryOne("SELECT * FROM users WHERE email = ? AND is_active = 1", [$email]);
+        return $this->findByEmailOrUsername($email);
+    }
+
+    public function findByEmailOrUsername(string $identifier): ?array
+    {
+        return Database::queryOne(
+            "SELECT * FROM users WHERE (email = ? OR username = ?) AND is_active = 1",
+            [$identifier, $identifier]
+        );
     }
 
     public function findById(string $id): ?array
@@ -62,6 +70,77 @@ class UserRepository
         }
 
         return $userId;
+    }
+
+    public function createStudentWithCredentials(array $data): string
+    {
+        $userId = 'usr_' . bin2hex(random_bytes(6));
+        $studentId = 'stu_' . bin2hex(random_bytes(6));
+        $now = date('Y-m-d H:i:s');
+        $password = !empty($data['password']) ? $data['password'] : 'elev123';
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $username = trim($data['username'] ?? '');
+        $email = !empty($data['email']) ? trim($data['email']) : ($username ?: (strtolower($data['first_name'] . '.' . $data['last_name']) . '@elev.ro'));
+
+        Database::execute(
+            "INSERT INTO users (id, email, username, password_hash, role, first_name, last_name, phone, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, 'student', ?, ?, ?, 1, ?, ?)",
+            [$userId, $email, $username ?: null, $hash, $data['first_name'], $data['last_name'], $data['phone'] ?? null, $now, $now]
+        );
+
+        Database::execute(
+            "INSERT INTO student_profiles (id, user_id, workspace_id, first_name, last_name, email, phone, is_paid, private_notes, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, 1, ?, ?, ?)",
+            [$studentId, $userId, $data['first_name'], $data['last_name'], $email, $data['phone'] ?? null, $data['private_notes'] ?? null, $now, $now]
+        );
+
+        // Link parent if provided
+        if (!empty($data['guardian_id'])) {
+            $linkId = 'gsl_' . bin2hex(random_bytes(6));
+            Database::execute(
+                "INSERT OR REPLACE INTO guardian_student_links (id, guardian_id, student_id, status, created_at) VALUES (?, ?, ?, 'active', ?)",
+                [$linkId, $data['guardian_id'], $studentId, $now]
+            );
+        } elseif (!empty($data['guardian_name'])) {
+            $guardianUserId = 'usr_' . bin2hex(random_bytes(6));
+            $guardianProfileId = 'grd_' . bin2hex(random_bytes(6));
+            $guardianParts = explode(' ', trim($data['guardian_name']), 2);
+            $gFirst = $guardianParts[0];
+            $gLast = $guardianParts[1] ?? $data['last_name'];
+            $gEmail = 'parinte.' . strtolower($gFirst) . '.' . strtolower($gLast) . '@familie.ro';
+            $gHash = password_hash('parinte123', PASSWORD_DEFAULT);
+
+            $existingUser = Database::queryOne("SELECT id FROM users WHERE email = ?", [$gEmail]);
+            if ($existingUser) {
+                $guardianProfile = Database::queryOne("SELECT id FROM guardian_profiles WHERE user_id = ?", [$existingUser['id']]);
+                $guardianProfileId = $guardianProfile['id'] ?? null;
+            } else {
+                Database::execute(
+                    "INSERT INTO users (id, email, username, password_hash, role, first_name, last_name, phone, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, 'parent', ?, ?, ?, 1, ?, ?)",
+                    [$guardianUserId, $gEmail, strtolower($gFirst . '.' . $gLast), $gHash, $gFirst, $gLast, $data['guardian_phone'] ?? null, $now, $now]
+                );
+                Database::execute(
+                    "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, phone, email, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, ?, ?)",
+                    [$guardianProfileId, $guardianUserId, $gFirst, $gLast, $data['guardian_phone'] ?? null, $gEmail, $now, $now]
+                );
+            }
+
+            if ($guardianProfileId) {
+                $linkId = 'gsl_' . bin2hex(random_bytes(6));
+                Database::execute(
+                    "INSERT OR REPLACE INTO guardian_student_links (id, guardian_id, student_id, status, created_at) VALUES (?, ?, ?, 'active', ?)",
+                    [$linkId, $guardianProfileId, $studentId, $now]
+                );
+            }
+        }
+
+        if (!empty($data['group_id'])) {
+            $enrId = 'enr_' . bin2hex(random_bytes(6));
+            Database::execute(
+                "INSERT OR REPLACE INTO group_enrollments (id, group_id, student_id, enrolled_at, status) VALUES (?, ?, ?, ?, 'active')",
+                [$enrId, $data['group_id'], $studentId, $now]
+            );
+        }
+
+        return $studentId;
     }
 
     public function createParentUser(array $data): string

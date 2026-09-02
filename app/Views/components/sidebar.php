@@ -27,12 +27,15 @@ $icon = static function (string $name) use ($icons): string {
 };
 
 $teacherNav = [
-  ['/teacher/dashboard', 'grid', 'Panou principal'],
-  ['/teacher/attendance', 'attendance', 'Prezență ședințe'],
-  ['/teacher/groups', 'groups', 'Grupe & Elevi'],
+  ['/teacher/students', 'groups', '1. Elevi'],
+  ['/teacher/groups', 'grid', '2. Grupe'],
+  ['/teacher/calendar', 'clock', '3. Orar'],
+  ['/teacher/attendance', 'attendance', '4. Ședințe'],
+  ['/teacher/assessments', 'result', '5. Evaluări'],
+  ['/teacher/dashboard', 'home', 'Panou principal'],
   ['/teacher/assignments', 'document', 'Teme & Materiale'],
-  ['/teacher/assessments', 'result', 'Notare & Feedback'],
   ['/teacher/conversations', 'chat', 'Conversații'],
+  ['/teacher/reports', 'reports', 'Rapoarte & Istoric'],
   ['/teacher/settings', 'settings', 'Setări'],
 ];
 
@@ -62,11 +65,11 @@ $studentNav = [
 $navItems = $role === 'teacher' ? $teacherNav : ($role === 'parent' ? $parentNav : $studentNav);
 $mobileItems = $role === 'teacher'
   ? [
-      ['/teacher/dashboard', 'home', 'Acasă'],
-      ['/teacher/groups', 'groups', 'Grupe'],
-      ['/teacher/attendance', 'attendance', 'Prezență'],
-      ['/teacher/conversations', 'chat', 'Chat'],
-      ['/teacher/settings', 'settings', 'Setări'],
+      ['/teacher/students', 'groups', 'Elevi'],
+      ['/teacher/groups', 'grid', 'Grupe'],
+      ['/teacher/calendar', 'clock', 'Orar'],
+      ['/teacher/attendance', 'attendance', 'Ședințe'],
+      ['/teacher/assessments', 'result', 'Evaluări'],
     ]
   : ($role === 'parent'
       ? [

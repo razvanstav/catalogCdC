@@ -120,6 +120,106 @@ class GroupRepository
         return $weekDays;
     }
 
+    public function getWeekCalendar(string $dateInWeek = 'today'): array
+    {
+        try {
+            $baseDate = new \DateTimeImmutable($dateInWeek);
+        } catch (\Throwable $e) {
+            $baseDate = new \DateTimeImmutable('today');
+        }
+
+        $today = new \DateTimeImmutable('today');
+        $currentDow = (int)$baseDate->format('N'); // 1 = Mon, 7 = Sun
+        $daysBack = ($currentDow === 7) ? 0 : $currentDow;
+        $sunday = $baseDate->modify("-{$daysBack} days");
+        $saturday = $sunday->modify('+6 days');
+
+        $allSchedules = $this->getSchedules();
+        $schedulesByDow = [];
+        foreach ($allSchedules as $s) {
+            $dow = (int)$s['day_of_week'];
+            $schedulesByDow[$dow][] = $s;
+        }
+
+        $dowOrder = [7, 1, 2, 3, 4, 5, 6];
+        $dayNames = [
+            7 => 'Duminică',
+            1 => 'Luni',
+            2 => 'Marți',
+            3 => 'Miercuri',
+            4 => 'Joi',
+            5 => 'Vineri',
+            6 => 'Sâmbătă',
+        ];
+
+        $now = date('Y-m-d H:i:s');
+        $days = [];
+
+        for ($i = 0; $i < 7; $i++) {
+            $dateObj = $sunday->modify("+{$i} days");
+            $dow = $dowOrder[$i];
+            $dateStr = $dateObj->format('Y-m-d');
+            $isToday = ($dateStr === $today->format('Y-m-d'));
+            $isPast = ($dateStr < $today->format('Y-m-d'));
+
+            $daySchedules = $schedulesByDow[$dow] ?? [];
+
+            // Instanțiere automată pentru grupele programate în ziua respectivă
+            foreach ($daySchedules as $sch) {
+                $gId = $sch['group_id'];
+                $startTime = $sch['start_time'];
+                $endTime = $sch['end_time'];
+                $exists = Database::queryOne(
+                    "SELECT id FROM lessons WHERE group_id = ? AND lesson_date = ? AND start_time = ?",
+                    [$gId, $dateStr, $startTime]
+                );
+                if (!$exists) {
+                    $lesId = 'les_' . bin2hex(random_bytes(6));
+                    $dayName = $dayNames[$dow];
+                    $title = "Ședință {$dayName} — {$sch['group_name']}";
+                    Database::execute(
+                        "INSERT INTO lessons (id, group_id, title, lesson_date, start_time, end_time, lesson_notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        [$lesId, $gId, $title, $dateStr, $startTime, $endTime, $sch['room_or_link'] ?? 'Cabinet didactic', $now]
+                    );
+                }
+            }
+
+            // Preluăm instanțele de ședințe create pentru ziua curentă
+            $lessonsForDay = Database::query("
+                SELECT l.*, g.name as group_name, g.color_tag as group_color,
+                       (SELECT COUNT(*) FROM group_enrollments ge WHERE ge.group_id = l.group_id AND ge.status = 'active') as student_count,
+                       (SELECT COUNT(*) FROM attendance_records ar WHERE ar.lesson_id = l.id) as attendance_count,
+                       (SELECT COUNT(*) FROM assessments asm WHERE asm.lesson_id = l.id) as assessment_count
+                FROM lessons l
+                INNER JOIN groups g ON l.group_id = g.id
+                WHERE l.lesson_date = ?
+                ORDER BY l.start_time ASC
+            ", [$dateStr]);
+
+            $days[] = [
+                'day_of_week' => $dow,
+                'day_name' => $dayNames[$dow],
+                'date' => $dateStr,
+                'formatted_date' => $dateObj->format('d.m.Y'),
+                'short_date' => $dateObj->format('d M'),
+                'is_today' => $isToday,
+                'is_past' => $isPast,
+                'lessons' => $lessonsForDay,
+            ];
+        }
+
+        return [
+            'sunday_date' => $sunday->format('Y-m-d'),
+            'saturday_date' => $saturday->format('Y-m-d'),
+            'formatted_range' => $sunday->format('d.m.Y') . ' – ' . $saturday->format('d.m.Y'),
+            'prev_week_date' => $sunday->modify('-7 days')->format('Y-m-d'),
+            'next_week_date' => $sunday->modify('+7 days')->format('Y-m-d'),
+            'today_date' => $today->format('Y-m-d'),
+            'is_current_week' => ($today >= $sunday && $today <= $saturday),
+            'days' => $days,
+        ];
+    }
+
     public function enrollStudent(string $groupId, string $studentId): bool
     {
         $id = 'enr_' . bin2hex(random_bytes(6));
@@ -162,6 +262,17 @@ class GroupRepository
             [$id, $groupId, $dayOfWeek, $startTime, $endTime, $roomOrLink]
         );
         return $id;
+    }
+
+    public function addScheduleWithDuration(string $groupId, int $dayOfWeek, string $startTime, int $durationMinutes, ?string $roomOrLink = 'Laborator didactic'): string
+    {
+        $startTs = strtotime("2020-01-01 $startTime");
+        $endTs = $startTs + ($durationMinutes * 60);
+        $endTime = date('H:i', $endTs);
+
+        $schId = $this->addSchedule($groupId, $dayOfWeek, $startTime, $endTime, $roomOrLink);
+        $this->generateRecurringLessons($groupId, 8);
+        return $schId;
     }
 
     public function deleteSchedule(string $scheduleId): bool

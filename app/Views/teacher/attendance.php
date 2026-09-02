@@ -6,13 +6,13 @@ $availableGuestStudents = array_values(array_filter($allStudents, static fn(arra
 ?>
 <header class="page-heading">
   <div class="page-heading__copy">
-    <div class="page-kicker"><span class="badge badge--sage">Prezență rapidă</span></div>
-    <h1 class="page-title">Catalog de prezență</h1>
-    <p class="page-subtitle">Marchează prezența fiecărui elev la fiecare oră. Poți adăuga rapid și elevi veniți la recuperare strict pentru această ședință.</p>
+    <div class="page-kicker"><span class="badge badge--sage">Tab 4 • Ședințe</span></div>
+    <h1 class="page-title">Ședințe & Prezență</h1>
+    <p class="page-subtitle">Fiecare oră din orar devine o instanță de ședință aici. Bifează prezența și starea de plată (PAID) a fiecărui copil.</p>
   </div>
   <div class="page-actions">
-    <a href="/teacher/reports?tab=attendance" class="btn btn--outline">📊 Prezență pe Interval</a>
     <?php if ($selectedLessonId): ?>
+      <a href="/teacher/assessments?lesson_id=<?= e($selectedLessonId) ?>" class="btn btn--outline">⭐ Evaluează această ședință (Tab 5)</a>
       <button type="button" class="btn btn--primary" data-modal-open="modal-add-guest">+ Elev la recuperare</button>
     <?php endif; ?>
     <button type="button" class="btn btn--outline" data-mark-all-present>Toți prezenți</button>

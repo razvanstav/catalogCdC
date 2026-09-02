@@ -86,6 +86,9 @@ class TeacherController
 
         $enrolledStudents = $this->studentRepo->getStudentsInGroup($id, 'teacher');
         $allStudents = $this->studentRepo->all('teacher');
+        $enrolledIds = array_flip(array_column($enrolledStudents, 'id'));
+        $unenrolledStudents = array_values(array_filter($allStudents, fn($s) => !isset($enrolledIds[$s['id']])));
+
         $schedules = $this->groupRepo->getSchedules($id);
         $lessons = $this->attendanceRepo->getLessons($id);
         $assignments = $this->assignmentRepo->getForGroup($id);
@@ -95,6 +98,7 @@ class TeacherController
             'group' => $group,
             'enrolledStudents' => $enrolledStudents,
             'allStudents' => $allStudents,
+            'unenrolledStudents' => $unenrolledStudents,
             'schedules' => $schedules,
             'lessons' => $lessons,
             'assignments' => $assignments,
@@ -163,7 +167,13 @@ class TeacherController
     public function students(): void
     {
         $students = $this->studentRepo->all('teacher');
-        View::render('teacher/students', ['students' => $students]);
+        $guardians = $this->conversationRepo->getAllGuardiansWithStudents();
+        $groups = $this->groupRepo->all();
+        View::render('teacher/students', [
+            'students' => $students,
+            'guardians' => $guardians,
+            'groups' => $groups,
+        ]);
     }
 
     public function togglePaid(string $id): void
@@ -199,26 +209,47 @@ class TeacherController
 
     public function createStudent(): void
     {
-        $first = Request::input('first_name');
-        $last = Request::input('last_name');
-        $initial = Request::input('father_initial');
-        $email = Request::input('email');
-        $phone = Request::input('phone');
-        $isPaid = Request::input('is_paid', 1);
+        $first = trim(Request::input('first_name') ?? '');
+        $last = trim(Request::input('last_name') ?? '');
+        $initial = trim(Request::input('father_initial') ?? '');
+        $guardianId = Request::input('guardian_id');
+        $guardianName = trim(Request::input('guardian_name') ?? '');
+        $guardianPhone = trim(Request::input('guardian_phone') ?? '');
+        $username = trim(Request::input('username') ?? '');
+        $password = trim(Request::input('password') ?? '');
+        $email = trim(Request::input('email') ?? '');
+        $phone = trim(Request::input('phone') ?? '');
+        $groupId = Request::input('group_id');
         $notes = Request::input('private_notes');
 
         if ($first && $last) {
-            $this->studentRepo->create([
+            if (!$username) {
+                $username = strtolower($first . '.' . $last);
+            }
+            if (!$password) {
+                $password = 'elev123';
+            }
+
+            $this->userRepo->createStudentWithCredentials([
                 'first_name' => $first,
                 'last_name' => $last,
                 'father_initial' => $initial ? "$initial." : null,
-                'email' => $email,
+                'username' => $username,
+                'password' => $password,
+                'email' => $email ?: ($username . '@elev.ro'),
                 'phone' => $phone,
-                'is_paid' => (int)$isPaid,
+                'guardian_id' => $guardianId ?: null,
+                'guardian_name' => $guardianName ?: null,
+                'guardian_phone' => $guardianPhone ?: null,
+                'group_id' => $groupId ?: null,
                 'private_notes' => $notes,
             ]);
-            Session::flash('success', 'Elevul a fost înregistrat în catalog!');
+
+            Session::flash('success', "Elevul {$first} {$last} a fost înregistrat cu succes! Utilizator login: {$username}, Parolă: {$password}");
+        } else {
+            Session::flash('error', 'Te rugăm să completezi cel puțin numele și prenumele elevului.');
         }
+
         Response::redirect('/teacher/students');
     }
 
@@ -233,9 +264,26 @@ class TeacherController
     public function attendance(): void
     {
         $groups = $this->groupRepo->all();
-        $selectedGroupId = Request::input('group_id', $groups[0]['id'] ?? '');
+        $selectedLessonId = Request::input('lesson_id');
+        $selectedGroupId = Request::input('group_id');
+
+        if ($selectedLessonId) {
+            $lesson = \App\Support\Database::queryOne("SELECT * FROM lessons WHERE id = ?", [$selectedLessonId]);
+            if ($lesson) {
+                $selectedGroupId = $lesson['group_id'];
+            }
+        }
+
+        if (empty($selectedGroupId)) {
+            $selectedGroupId = $groups[0]['id'] ?? '';
+        }
+
         $lessons = $this->attendanceRepo->getLessons($selectedGroupId);
-        $selectedLessonId = Request::input('lesson_id', $lessons[0]['id'] ?? '');
+        if (empty($selectedLessonId)) {
+            $selectedLessonId = $lessons[0]['id'] ?? '';
+        }
+
+        $currentLesson = $selectedLessonId ? \App\Support\Database::queryOne("SELECT * FROM lessons WHERE id = ?", [$selectedLessonId]) : null;
 
         $students = ($selectedLessonId && $selectedGroupId)
             ? $this->attendanceRepo->getStudentsForLesson($selectedLessonId, $selectedGroupId)
@@ -253,6 +301,7 @@ class TeacherController
             'selectedGroupId' => $selectedGroupId,
             'lessons' => $lessons,
             'selectedLessonId' => $selectedLessonId,
+            'currentLesson' => $currentLesson,
             'students' => $students,
             'allStudents' => $allStudents,
             'recordMap' => $recordMap,
@@ -410,22 +459,66 @@ class TeacherController
     public function assessments(): void
     {
         $groups = $this->groupRepo->all();
-        $selectedGroupId = Request::input('group_id', $groups[0]['id'] ?? '');
+        $selectedDate = Request::input('date', date('Y-m-d'));
+        $selectedLessonId = Request::input('lesson_id');
+        $requestedAsmId = Request::input('assessment_id');
+        $selectedGroupId = Request::input('group_id');
+
+        if ($selectedLessonId) {
+            $lesson = \App\Support\Database::queryOne("SELECT * FROM lessons WHERE id = ?", [$selectedLessonId]);
+            if ($lesson) {
+                $selectedGroupId = $lesson['group_id'];
+                $selectedDate = $lesson['lesson_date'];
+            }
+        }
+
+        if ($requestedAsmId) {
+            $currentAsm = $this->assessmentRepo->findById($requestedAsmId);
+            if ($currentAsm) {
+                $selectedGroupId = $currentAsm['group_id'];
+                $selectedDate = $currentAsm['assessment_date'];
+                if (!empty($currentAsm['lesson_id'])) {
+                    $selectedLessonId = $currentAsm['lesson_id'];
+                }
+            }
+        }
+
+        if (empty($selectedGroupId)) {
+            $selectedGroupId = $groups[0]['id'] ?? '';
+        }
+
+        // Fetch lessons for the chosen date to populate the session selector
+        $lessonsForDate = \App\Support\Database::query("
+            SELECT l.*, g.name as group_name
+            FROM lessons l
+            INNER JOIN groups g ON l.group_id = g.id
+            WHERE l.lesson_date = ?
+            ORDER BY l.start_time ASC
+        ", [$selectedDate]);
+
+        $allRecentLessons = \App\Support\Database::query("
+            SELECT l.*, g.name as group_name
+            FROM lessons l
+            INNER JOIN groups g ON l.group_id = g.id
+            ORDER BY l.lesson_date DESC, l.start_time ASC
+            LIMIT 40
+        ");
+
         $assessments = $selectedGroupId ? $this->assessmentRepo->getForGroup($selectedGroupId) : [];
 
         // Auto-create assessment if none exists for this group
         if (empty($assessments) && !empty($selectedGroupId)) {
             $defaultAsmId = $this->assessmentRepo->create([
                 'group_id' => $selectedGroupId,
-                'title' => 'Evaluare & Note Curs ' . date('Y'),
+                'lesson_id' => $selectedLessonId ?: null,
+                'title' => 'Evaluare & Note ' . date('Y'),
                 'assessment_type' => 'test',
                 'max_score' => 5.0,
-                'assessment_date' => date('Y-m-d'),
+                'assessment_date' => $selectedDate,
             ]);
             $assessments = $this->assessmentRepo->getForGroup($selectedGroupId);
             $selectedAssessmentId = $defaultAsmId;
         } else {
-            $requestedAsmId = Request::input('assessment_id');
             $validIds = array_column($assessments, 'id');
             if ($requestedAsmId && in_array($requestedAsmId, $validIds, true)) {
                 $selectedAssessmentId = $requestedAsmId;
@@ -449,27 +542,48 @@ class TeacherController
             'selectedAssessmentId' => $selectedAssessmentId,
             'students' => $students,
             'resultMap' => $resultMap,
+            'selectedDate' => $selectedDate,
+            'selectedLessonId' => $selectedLessonId,
+            'lessonsForDate' => $lessonsForDate,
+            'allRecentLessons' => $allRecentLessons,
         ]);
     }
 
     public function createAssessment(): void
     {
+        $lessonId = Request::input('lesson_id');
         $groupId = Request::input('group_id');
-        $title = Request::input('title');
+        $title = trim(Request::input('title') ?? '');
         $type = Request::input('assessment_type', 'test');
         $maxScore = (float)Request::input('max_score', 5.0);
         $date = Request::input('assessment_date', date('Y-m-d'));
 
+        if ($lessonId) {
+            $lesson = \App\Support\Database::queryOne("SELECT * FROM lessons WHERE id = ?", [$lessonId]);
+            if ($lesson) {
+                $groupId = $lesson['group_id'];
+                $date = $lesson['lesson_date'];
+                if (empty($title)) {
+                    $title = "Evaluare " . $lesson['title'];
+                }
+            }
+        }
+
+        if (empty($title) && !empty($groupId)) {
+            $title = "Evaluare " . date('d.m.Y');
+        }
+
         if ($groupId && $title) {
             $id = $this->assessmentRepo->create([
                 'group_id' => $groupId,
+                'lesson_id' => $lessonId ?: null,
                 'title' => $title,
                 'assessment_type' => $type,
                 'max_score' => $maxScore,
                 'assessment_date' => $date,
             ]);
-            Session::flash('success', 'Evaluarea a fost creată!');
-            Response::redirect("/teacher/assessments?group_id=$groupId&assessment_id=$id");
+            Session::flash('success', "Evaluarea «{$title}» a fost creată cu succes!");
+            Response::redirect("/teacher/assessments?group_id=$groupId&assessment_id=$id&date=$date");
             return;
         }
         Response::redirect('/teacher/assessments');
@@ -624,8 +738,31 @@ class TeacherController
     public function calendar(): void
     {
         $groups = $this->groupRepo->all();
+        $date = Request::input('date', 'today');
+        $week = $this->groupRepo->getWeekCalendar($date);
         $schedules = $this->groupRepo->getSchedules();
-        View::render('teacher/calendar', ['groups' => $groups, 'schedules' => $schedules]);
+        View::render('teacher/calendar', [
+            'groups' => $groups,
+            'week' => $week,
+            'schedules' => $schedules,
+            'selectedDate' => $date,
+        ]);
+    }
+
+    public function addScheduleFromCalendar(): void
+    {
+        $groupId = Request::input('group_id');
+        $dayOfWeek = (int)Request::input('day_of_week', 1);
+        $startTime = Request::input('start_time', '09:00');
+        $durationMinutes = (int)Request::input('duration_minutes', 90);
+        $room = Request::input('room_or_link', 'Cabinet didactic');
+        $date = Request::input('return_date', 'today');
+
+        if ($groupId && $startTime) {
+            $this->groupRepo->addScheduleWithDuration($groupId, $dayOfWeek, $startTime, $durationMinutes, $room);
+            Session::flash('success', 'Intervalul de orar a fost salvat și ședințele au fost generate automat!');
+        }
+        Response::redirect("/teacher/calendar?date=$date");
     }
 
     public function reports(): void
@@ -786,15 +923,24 @@ class TeacherController
     {
         $dayOfWeek = (int)Request::input('day_of_week', 1);
         $startTime = Request::input('start_time', '16:00');
-        $endTime = Request::input('end_time', '18:00');
-        $room = Request::input('room_or_link', 'Laborator didactic');
+        $durationMinutes = (int)Request::input('duration_minutes', 0);
+        $endTime = Request::input('end_time');
+        if ($durationMinutes > 0) {
+            $startTs = strtotime("2020-01-01 $startTime");
+            $endTime = date('H:i', $startTs + ($durationMinutes * 60));
+        } elseif (!$endTime) {
+            $endTime = '17:30';
+        }
+
+        $room = Request::input('room_or_link', 'Cabinet didactic');
+        $returnUrl = Request::input('return_url', "/teacher/groups/$groupId");
 
         if ($groupId && $startTime && $endTime) {
             $this->groupRepo->addSchedule($groupId, $dayOfWeek, $startTime, $endTime, $room);
-            $this->groupRepo->generateRecurringLessons($groupId, 4);
-            Session::flash('success', 'Programul săptămânal recurent a fost salvat și ședințele au fost generate automat!');
+            $this->groupRepo->generateRecurringLessons($groupId, 8);
+            Session::flash('success', 'Programul săptămânal recurent a fost salvat și ședințele au fost create automat!');
         }
-        Response::redirect("/teacher/groups/$groupId");
+        Response::redirect($returnUrl);
     }
 
     public function deleteSchedule(string $groupId, string $scheduleId): void

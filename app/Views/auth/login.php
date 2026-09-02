@@ -11,8 +11,8 @@
     <?= csrf_field() ?>
 
     <div class="form-group">
-      <label class="form-label" for="email">E-mail / Nume utilizator</label>
-      <input type="email" id="email" name="email" class="form-control" placeholder="user@exemplu.ro" autocomplete="email" required>
+      <label class="form-label" for="email">Nume utilizator sau e-mail</label>
+      <input type="text" id="email" name="email" class="form-control" placeholder="utilizator sau email" autocomplete="username" required>
     </div>
 
     <div class="form-group">

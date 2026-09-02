@@ -214,58 +214,73 @@ $tone = ui_tone_class($group['id']);
     <p class="modal-description">Selectează un elev existent din catalog.</p>
     <form action="/teacher/groups/<?= e($group['id']) ?>/enroll" method="POST" class="form-stack">
       <?= csrf_field() ?>
-      <div class="form-group">
-        <label class="form-label" for="student_id">Elev</label>
-        <select id="student_id" name="student_id" class="form-control" required>
-          <option value="">Alege din listă</option>
-          <?php foreach ($unenrolledStudents as $student): ?>
-            <option value="<?= e($student['id']) ?>"><?= e($student['first_name'] . ' ' . $student['last_name']) ?><?= $student['email'] ? ' • ' . e($student['email']) : '' ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn--ghost" data-modal-close>Renunță</button>
-        <button type="submit" class="btn btn--primary">Înscrie elevul</button>
-      </div>
+      <?php if (!empty($unenrolledStudents)): ?>
+        <div class="form-group">
+          <label class="form-label" for="student_id">Alege elevul din catalog</label>
+          <select id="student_id" name="student_id" class="form-control" required>
+            <option value="">Alege din listă (apar doar elevii neînscriși încă)</option>
+            <?php foreach ($unenrolledStudents as $student): ?>
+              <option value="<?= e($student['id']) ?>"><?= e($student['first_name'] . ' ' . $student['last_name']) ?><?= $student['email'] ? ' • ' . e($student['email']) : '' ?></option>
+            <?php endforeach; ?>
+          </select>
+          <span class="form-hint">Elevii deja înscriși în această grupă nu mai apar în listă.</span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn--ghost" data-modal-close>Renunță</button>
+          <button type="submit" class="btn btn--primary">Înscrie elevul în grupă</button>
+        </div>
+      <?php else: ?>
+        <div class="card card--flat">
+          <p class="entity-card__description">Toți elevii din catalog sunt deja înscriși în această grupă.</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn--ghost" data-modal-close>Închide</button>
+          <a href="/teacher/students" class="btn btn--primary">＋ Adaugă un elev nou în catalog</a>
+        </div>
+      <?php endif; ?>
     </form>
   </section>
 </div>
 
 <div id="modal-add-schedule" class="modal-backdrop" aria-hidden="true">
   <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-schedule-title">
-    <h2 class="modal-title" id="add-schedule-title">Adaugă orar recurent</h2>
-    <p class="modal-description">Stabilește ziua și intervalul orar în care această grupă se întrunește săptămânal.</p>
+    <h2 class="modal-title" id="add-schedule-title">Stabilește orarul recurent al grupei</h2>
+    <p class="modal-description">Ziua și ora la care această grupă are curs pe tot parcursul anului școlar.</p>
     <form action="/teacher/groups/<?= e($group['id']) ?>/schedules" method="POST" class="form-stack">
       <?= csrf_field() ?>
       <div class="form-group">
         <label class="form-label" for="schedule_day">Ziua din săptămână</label>
         <select id="schedule_day" name="day_of_week" class="form-control" required>
-          <option value="1">Luni</option>
+          <option value="7">Duminică</option>
+          <option value="1" selected>Luni</option>
           <option value="2">Marți</option>
           <option value="3">Miercuri</option>
           <option value="4">Joi</option>
           <option value="5">Vineri</option>
           <option value="6">Sâmbătă</option>
-          <option value="7">Duminică</option>
         </select>
       </div>
       <div class="form-grid">
         <div class="form-group">
           <label class="form-label" for="schedule_start">Ora de început</label>
-          <input type="time" id="schedule_start" name="start_time" value="16:00" class="form-control" required>
+          <input type="time" id="schedule_start" name="start_time" value="09:00" class="form-control" required>
         </div>
         <div class="form-group">
-          <label class="form-label" for="schedule_end">Ora de sfârșit</label>
-          <input type="time" id="schedule_end" name="end_time" value="18:00" class="form-control" required>
+          <label class="form-label" for="schedule_duration">Durată ședință</label>
+          <select id="schedule_duration" name="duration_minutes" class="form-control">
+            <option value="60">1 oră (60 min)</option>
+            <option value="90" selected>1 oră și 30 min (90 min)</option>
+            <option value="120">2 ore (120 min)</option>
+          </select>
         </div>
       </div>
       <div class="form-group">
         <label class="form-label" for="schedule_room">Cabinet didactic / Sală / Link</label>
-        <input type="text" id="schedule_room" name="room_or_link" class="form-control" placeholder="Laborator Informatică sau Link Discord/Zoom">
+        <input type="text" id="schedule_room" name="room_or_link" class="form-control" value="Cabinet Informatică" placeholder="Laborator Informatică sau Link Discord/Zoom">
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn--ghost" data-modal-close>Renunță</button>
-        <button type="submit" class="btn btn--primary">Salvează orarul recurent</button>
+        <button type="submit" class="btn btn--primary">Salvează orarul recurent pe tot anul</button>
       </div>
     </form>
   </section>

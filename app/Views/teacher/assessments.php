@@ -1,13 +1,13 @@
 <?php $title = 'Evaluări și rezultate'; ?>
 <header class="page-heading">
   <div class="page-heading__copy">
-    <div class="page-kicker"><span class="badge badge--brand">Progres explicat</span></div>
-    <h1 class="page-title">Evaluări și rezultate</h1>
-    <p class="page-subtitle">Înregistrează punctajul, publică feedback util familiei și păstrează separat observațiile tale private.</p>
+    <div class="page-kicker"><span class="badge badge--brand">Tab 5 • Evaluări</span></div>
+    <h1 class="page-title">Evaluări & Note (1–5)</h1>
+    <p class="page-subtitle">Evaluează elevii în cadrul ședințelor avute. Alege ședința din ziua respectivă, notează de la 1 la 5 și trimite feedback rapid.</p>
   </div>
   <div class="page-actions">
     <a href="/teacher/reports?tab=assessments" class="btn btn--outline">📊 Istoric Evaluări</a>
-    <button type="button" class="btn btn--primary" data-modal-open="modal-create-assessment">Evaluare nouă</button>
+    <button type="button" class="btn btn--primary" data-modal-open="modal-create-assessment">＋ Evaluare nouă pe ședință</button>
   </div>
 </header>
 
@@ -101,18 +101,78 @@
 
 <div id="modal-create-assessment" class="modal-backdrop" aria-hidden="true">
   <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="create-assessment-title">
-    <h2 class="modal-title" id="create-assessment-title">Creează o evaluare / notare</h2>
-    <p class="modal-description">Poate fi o evaluare după ședință, un test, o verificare de temă sau un proiect practic.</p>
+    <h2 class="modal-title" id="create-assessment-title">Creează o evaluare în cadrul unei ședințe</h2>
+    <p class="modal-description">Alege ședința din ziua respectivă pentru care dai note și feedback. Poți adăuga oricâte evaluări dorești în aceeași zi.</p>
     <form action="/teacher/assessments" method="POST" class="form-stack">
       <?= csrf_field() ?>
-      <div class="form-group"><label class="form-label" for="assessment-group">Grupa</label><select id="assessment-group" name="group_id" class="form-control" required><?php foreach ($groups as $group): ?><option value="<?= e($group['id']) ?>" <?= $group['id'] === $selectedGroupId ? 'selected' : '' ?>><?= e($group['name']) ?></option><?php endforeach; ?></select></div>
-      <div class="form-group"><label class="form-label" for="assessment-title">Titlul evaluării</label><input type="text" id="assessment-title" name="title" class="form-control" placeholder="Exemplu: Ședință practică — Algoritmi și structuri" required></div>
-      <div class="form-grid">
-        <div class="form-group"><label class="form-label" for="assessment-type">Tip</label><select id="assessment-type" name="assessment_type" class="form-control"><option value="homework_check">Verificare temă / ședință</option><option value="project">Proiect practic</option><option value="test">Test scris</option><option value="oral">Evaluare orală</option></select></div>
-        <div class="form-group"><label class="form-label" for="assessment-date">Data</label><input type="date" id="assessment-date" name="assessment_date" class="form-control" value="<?= date('Y-m-d') ?>" required></div>
+
+      <div class="form-group">
+        <label class="form-label" for="assessment-date">Data</label>
+        <input type="date" id="assessment-date" name="assessment_date" class="form-control" value="<?= e($selectedDate ?? date('Y-m-d')) ?>" required>
       </div>
-      <div class="form-group"><label class="form-label" for="max-score">Notă maximă</label><input type="number" id="max-score" name="max_score" min="1" max="10" step="1" value="5" class="form-control"></div>
-      <div class="modal-actions"><button type="button" class="btn btn--ghost" data-modal-close>Renunță</button><button type="submit" class="btn btn--primary">Creează evaluarea</button></div>
+
+      <div class="form-group">
+        <label class="form-label" for="assessment-lesson">Alege ședința din ziua respectivă</label>
+        <select id="assessment-lesson" name="lesson_id" class="form-control">
+          <option value="">-- Alege ședința de evaluat --</option>
+          <?php if (!empty($lessonsForDate)): ?>
+            <optgroup label="Ședințe din data selectată">
+              <?php foreach ($lessonsForDate as $l): ?>
+                <option value="<?= e($l['id']) ?>" <?= ($selectedLessonId ?? '') === $l['id'] ? 'selected' : '' ?>>
+                  <?= e($l['start_time'] . '–' . $l['end_time']) ?> • <?= e($l['group_name']) ?> — <?= e($l['title']) ?>
+                </option>
+              <?php endforeach; ?>
+            </optgroup>
+          <?php endif; ?>
+          <?php if (!empty($allRecentLessons)): ?>
+            <optgroup label="Alte ședințe recente">
+              <?php foreach ($allRecentLessons as $rl): ?>
+                <option value="<?= e($rl['id']) ?>" <?= ($selectedLessonId ?? '') === $rl['id'] ? 'selected' : '' ?>>
+                  <?= format_date_ro($rl['lesson_date']) ?> (<?= e($rl['start_time']) ?>) • <?= e($rl['group_name']) ?>
+                </option>
+              <?php endforeach; ?>
+            </optgroup>
+          <?php endif; ?>
+          <option value="">-- Fără ședință specifică (evaluare pe toată grupa) --</option>
+        </select>
+        <span class="form-hint">Dacă alegi o ședință, grupa se asociază automat.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="assessment-group">Grupa (dacă nu ai ales o ședință mai sus)</label>
+        <select id="assessment-group" name="group_id" class="form-control">
+          <?php foreach ($groups as $group): ?>
+            <option value="<?= e($group['id']) ?>" <?= $group['id'] === $selectedGroupId ? 'selected' : '' ?>><?= e($group['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="assessment-title">Titlul evaluării</label>
+        <input type="text" id="assessment-title" name="title" class="form-control" placeholder="Exemplu: Verificare Bucle & Condiționale sau Evaluare Ședință" required>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="assessment-type">Tip</label>
+          <select id="assessment-type" name="assessment_type" class="form-control">
+            <option value="homework_check">Verificare temă / activitate la clasă</option>
+            <option value="test">Test scris / verificare cod</option>
+            <option value="project">Proiect practic</option>
+            <option value="oral">Evaluare orală</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="max-score">Scară notare</label>
+          <input type="number" id="max-score" name="max_score" min="1" max="5" step="1" value="5" class="form-control">
+          <span class="form-hint">Note de la 1 la 5</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn--ghost" data-modal-close>Renunță</button>
+        <button type="submit" class="btn btn--primary">Creează evaluarea</button>
+      </div>
     </form>
   </section>
 </div>

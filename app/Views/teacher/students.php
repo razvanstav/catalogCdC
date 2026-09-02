@@ -53,43 +53,79 @@
 
 <div id="modal-create-student" class="modal-backdrop" aria-hidden="true">
   <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="create-student-title">
-    <h2 class="modal-title" id="create-student-title">Înregistrează un elev</h2>
-    <p class="modal-description">Datele de bază și o notiță privată opțională.</p>
+    <h2 class="modal-title" id="create-student-title">Înregistrează un elev nou</h2>
+    <p class="modal-description">Completează datele elevului, părintele și credențialele de acces setate direct de tine.</p>
 
     <form action="/teacher/students" method="POST" class="form-stack">
       <?= csrf_field() ?>
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-label" for="first_name">Prenume</label>
-          <input type="text" id="first_name" name="first_name" class="form-control" placeholder="Andrei" required>
-        </div>
-        <div class="form-group">
           <label class="form-label" for="last_name">Nume de familie</label>
-          <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Ionescu" required>
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label" for="father_initial">Inițială</label>
-          <input type="text" id="father_initial" name="father_initial" maxlength="2" class="form-control" placeholder="M">
+          <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Popescu" required>
         </div>
         <div class="form-group">
-          <label class="form-label" for="email">E-mail</label>
-          <input type="email" id="email" name="email" class="form-control" placeholder="andrei@elev.ro">
+          <label class="form-label" for="first_name">Prenume elev</label>
+          <input type="text" id="first_name" name="first_name" class="form-control" placeholder="Alexandru" required>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="phone">Telefon</label>
-        <input type="tel" id="phone" name="phone" class="form-control" placeholder="07xx xxx xxx">
+
+      <div class="card card--flat">
+        <div class="form-group">
+          <label class="form-label" for="guardian_id">Părinte / Familie</label>
+          <select id="guardian_id" name="guardian_id" class="form-control">
+            <option value="">-- Alege un părinte existent sau completează mai jos --</option>
+            <?php foreach (($guardians ?? []) as $g): ?>
+              <option value="<?= e($g['id']) ?>"><?= e($g['first_name'] . ' ' . $g['last_name']) ?> (<?= e($g['phone'] ?: $g['email']) ?>)</option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="guardian_name">Nume părinte nou (dacă nu e în listă)</label>
+            <input type="text" id="guardian_name" name="guardian_name" class="form-control" placeholder="Ion Popescu">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="guardian_phone">Telefon părinte</label>
+            <input type="tel" id="guardian_phone" name="guardian_phone" class="form-control" placeholder="07xx xxx xxx">
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="private_notes">Notiță privată inițială</label>
-        <textarea id="private_notes" name="private_notes" class="form-control" placeholder="Nivel de pornire, ritm de lucru, lucruri de reluat"></textarea>
-        <span class="form-hint">Această notiță rămâne vizibilă exclusiv profesorului.</span>
+
+      <div class="card card--flat">
+        <div class="form-group"><span class="badge badge--brand">Credențiale Login Elev</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="username">Nume utilizator (login elev)</label>
+            <input type="text" id="username" name="username" class="form-control" placeholder="alex.popescu" autocomplete="off">
+            <span class="form-hint">Dacă lași gol, se generează automat din nume (ex: alex.popescu).</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="password">Parolă de login</label>
+            <input type="text" id="password" name="password" class="form-control" value="elev123" placeholder="Parolă dorită" autocomplete="off" required>
+            <span class="form-hint">Parola pe care o transmiți elevului pentru autentificare.</span>
+          </div>
+        </div>
       </div>
+
+      <div class="form-group">
+        <label class="form-label" for="group_id">Înscrie direct în grupă (opțional)</label>
+        <select id="group_id" name="group_id" class="form-control">
+          <option value="">-- Fără grupă inițial (îl înscrii ulterior din tabul Grupe) --</option>
+          <?php foreach (($groups ?? []) as $grp): ?>
+            <option value="<?= e($grp['id']) ?>"><?= e($grp['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="private_notes">Notiță privată confidențială (doar profesoară)</label>
+        <textarea id="private_notes" name="private_notes" class="form-control" placeholder="Observații despre elev, nivel inițial, ritm de învățare..."></textarea>
+      </div>
+
       <div class="modal-actions">
         <button type="button" class="btn btn--ghost" data-modal-close>Renunță</button>
-        <button type="submit" class="btn btn--primary">Salvează elevul</button>
+        <button type="submit" class="btn btn--primary">Înregistrează elevul și creează contul</button>
       </div>
     </form>
   </section>

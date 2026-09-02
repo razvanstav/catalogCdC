@@ -9,27 +9,46 @@ class AssessmentRepository
     public function getForGroup(string $groupId): array
     {
         return Database::query("
-            SELECT a.*, g.name as group_name
+            SELECT a.*, g.name as group_name, l.title as lesson_title, l.start_time as lesson_start, l.end_time as lesson_end
             FROM assessments a
             INNER JOIN groups g ON a.group_id = g.id
+            LEFT JOIN lessons l ON a.lesson_id = l.id
             WHERE a.group_id = ?
-            ORDER BY a.assessment_date DESC
+            ORDER BY a.assessment_date DESC, a.created_at DESC
         ", [$groupId]);
     }
 
     public function all(): array
     {
         return Database::query("
-            SELECT a.*, g.name as group_name
+            SELECT a.*, g.name as group_name, l.title as lesson_title, l.start_time as lesson_start, l.end_time as lesson_end
             FROM assessments a
             INNER JOIN groups g ON a.group_id = g.id
-            ORDER BY a.assessment_date DESC
+            LEFT JOIN lessons l ON a.lesson_id = l.id
+            ORDER BY a.assessment_date DESC, a.created_at DESC
         ");
     }
 
     public function findById(string $id): ?array
     {
-        return Database::queryOne("SELECT * FROM assessments WHERE id = ?", [$id]);
+        return Database::queryOne("
+            SELECT a.*, g.name as group_name, l.title as lesson_title, l.start_time as lesson_start, l.end_time as lesson_end
+            FROM assessments a
+            INNER JOIN groups g ON a.group_id = g.id
+            LEFT JOIN lessons l ON a.lesson_id = l.id
+            WHERE a.id = ?
+        ", [$id]);
+    }
+
+    public function getForLesson(string $lessonId): array
+    {
+        return Database::query("
+            SELECT a.*, g.name as group_name
+            FROM assessments a
+            INNER JOIN groups g ON a.group_id = g.id
+            WHERE a.lesson_id = ?
+            ORDER BY a.created_at DESC
+        ", [$lessonId]);
     }
 
     public function create(array $data): string
@@ -37,13 +56,14 @@ class AssessmentRepository
         $id = 'asm_' . bin2hex(random_bytes(6));
         $now = date('Y-m-d H:i:s');
         Database::execute(
-            "INSERT INTO assessments (id, group_id, title, assessment_type, max_score, assessment_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO assessments (id, group_id, lesson_id, title, assessment_type, max_score, assessment_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 $id,
                 $data['group_id'],
+                $data['lesson_id'] ?? null,
                 $data['title'],
                 $data['assessment_type'] ?? 'test',
-                $data['max_score'] ?? 10.0,
+                $data['max_score'] ?? 5.0,
                 $data['assessment_date'],
                 $now
             ]

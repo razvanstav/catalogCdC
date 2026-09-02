@@ -64,6 +64,7 @@ Router::post('/teacher/conversations/message', 'TeacherController@sendMessage', 
 Router::post('/teacher/conversations/start', 'TeacherController@startConversation', ['teacher', 'csrf']);
 
 Router::get('/teacher/calendar', 'TeacherController@calendar', ['teacher']);
+Router::post('/teacher/calendar/schedule', 'TeacherController@addScheduleFromCalendar', ['teacher', 'csrf']);
 Router::get('/teacher/reports', 'TeacherController@reports', ['teacher']);
 Router::get('/teacher/settings', 'TeacherController@settings', ['teacher']);
 Router::post('/teacher/settings', 'TeacherController@updateSettings', ['teacher', 'csrf']);
