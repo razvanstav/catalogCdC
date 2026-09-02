@@ -93,6 +93,33 @@ class StudentRepository
         );
     }
 
+    public function update(string $studentId, array $data): bool
+    {
+        $now = date('Y-m-d H:i:s');
+        $result = Database::execute(
+            "UPDATE student_profiles SET first_name = ?, last_name = ?, father_initial = ?, email = ?, phone = ?, updated_at = ? WHERE id = ?",
+            [
+                $data['first_name'],
+                $data['last_name'],
+                $data['father_initial'] ?? null,
+                $data['email'] ?? null,
+                $data['phone'] ?? null,
+                $now,
+                $studentId
+            ]
+        );
+
+        $student = Database::queryOne("SELECT user_id FROM student_profiles WHERE id = ?", [$studentId]);
+        if ($student && !empty($student['user_id'])) {
+            Database::execute(
+                "UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, updated_at = ? WHERE id = ?",
+                [$data['first_name'], $data['last_name'], $data['email'] ?? null, $data['phone'] ?? null, $now, $student['user_id']]
+            );
+        }
+
+        return $result;
+    }
+
     public function create(array $data): string
     {
         $id = 'stu_' . bin2hex(random_bytes(6));

@@ -27,12 +27,12 @@ $icon = static function (string $name) use ($icons): string {
 };
 
 $teacherNav = [
+  ['/teacher/dashboard', 'home', 'Panou principal'],
   ['/teacher/students', 'groups', '1. Elevi'],
   ['/teacher/groups', 'grid', '2. Grupe'],
   ['/teacher/calendar', 'clock', '3. Orar'],
   ['/teacher/attendance', 'attendance', '4. Ședințe'],
   ['/teacher/assessments', 'result', '5. Evaluări'],
-  ['/teacher/dashboard', 'home', 'Panou principal'],
   ['/teacher/assignments', 'document', 'Teme & Materiale'],
   ['/teacher/conversations', 'chat', 'Conversații'],
   ['/teacher/reports', 'reports', 'Rapoarte & Istoric'],
@@ -65,6 +65,7 @@ $studentNav = [
 $navItems = $role === 'teacher' ? $teacherNav : ($role === 'parent' ? $parentNav : $studentNav);
 $mobileItems = $role === 'teacher'
   ? [
+      ['/teacher/dashboard', 'home', 'Panou'],
       ['/teacher/students', 'groups', 'Elevi'],
       ['/teacher/groups', 'grid', 'Grupe'],
       ['/teacher/calendar', 'clock', 'Orar'],

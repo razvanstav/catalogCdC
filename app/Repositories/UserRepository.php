@@ -201,9 +201,48 @@ class UserRepository
     public function getAllGuardians(): array
     {
         return Database::query("
-            SELECT id, first_name, last_name, phone, email
+            SELECT id, first_name, last_name, phone, email, relationship
             FROM guardian_profiles
             ORDER BY first_name ASC, last_name ASC
         ");
+    }
+
+    public function updateGuardian(string $guardianId, array $data): bool
+    {
+        $now = date('Y-m-d H:i:s');
+        $guardian = Database::queryOne("SELECT * FROM guardian_profiles WHERE id = ?", [$guardianId]);
+        if (!$guardian) return false;
+
+        Database::execute(
+            "UPDATE guardian_profiles SET first_name = ?, last_name = ?, phone = ?, email = ?, relationship = ?, updated_at = ? WHERE id = ?",
+            [
+                $data['first_name'],
+                $data['last_name'],
+                $data['phone'] ?? null,
+                $data['email'] ?? null,
+                $data['relationship'] ?? 'Părinte',
+                $now,
+                $guardianId
+            ]
+        );
+
+        if (!empty($guardian['user_id'])) {
+            Database::execute(
+                "UPDATE users SET first_name = ?, last_name = ?, phone = ?, email = ?, updated_at = ? WHERE id = ?",
+                [$data['first_name'], $data['last_name'], $data['phone'] ?? null, $data['email'] ?? null, $now, $guardian['user_id']]
+            );
+        }
+
+        return true;
+    }
+
+    public function linkGuardianToStudent(string $studentId, string $guardianId): bool
+    {
+        $now = date('Y-m-d H:i:s');
+        $linkId = 'gsl_' . bin2hex(random_bytes(6));
+        return Database::execute(
+            "INSERT OR REPLACE INTO guardian_student_links (id, guardian_id, student_id, status, created_at) VALUES (?, ?, ?, 'active', ?)",
+            [$linkId, $guardianId, $studentId, $now]
+        );
     }
 }

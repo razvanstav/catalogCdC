@@ -34,8 +34,11 @@ Router::post('/teacher/groups/{id}/unenroll', 'TeacherController@unenrollStudent
 Router::get('/teacher/students', 'TeacherController@students', ['teacher']);
 Router::post('/teacher/students', 'TeacherController@createStudent', ['teacher', 'csrf']);
 Router::get('/teacher/students/{id}', 'TeacherController@studentDetail', ['teacher']);
+Router::post('/teacher/students/{id}/edit', 'TeacherController@updateStudent', ['teacher', 'csrf']);
 Router::post('/teacher/students/{id}/notes', 'TeacherController@updateStudentNotes', ['teacher', 'csrf']);
 Router::post('/teacher/students/{id}/toggle-paid', 'TeacherController@togglePaid', ['teacher', 'csrf']);
+Router::post('/teacher/students/{id}/link-guardian', 'TeacherController@linkGuardianToStudent', ['teacher', 'csrf']);
+Router::post('/teacher/guardians/{id}/edit', 'TeacherController@updateGuardian', ['teacher', 'csrf']);
 
 Router::get('/teacher/attendance', 'TeacherController@attendance', ['teacher']);
 Router::post('/teacher/attendance', 'TeacherController@saveAttendance', ['teacher', 'csrf']);

@@ -12,6 +12,7 @@
       </div>
     </div>
     <div class="page-actions">
+      <button type="button" class="btn btn--outline" data-modal-open="modal-edit-student">✏️ Editează date elev</button>
       <button type="button" class="btn btn--sage" data-modal-open="modal-create-feedback">Publică feedback</button>
     </div>
   </div>
@@ -98,17 +99,43 @@
     </article>
 
     <article class="card">
-      <div class="card-header"><div class="card-header__copy"><h2 class="card-title">Părinți și tutori</h2><p class="card-description">Persoanele asociate elevului</p></div></div>
+      <div class="card-header">
+        <div class="card-header__copy">
+          <h2 class="card-title">Părinți și tutori</h2>
+          <p class="card-description">Date de contact, telefon și persoane asociate</p>
+        </div>
+        <button type="button" class="btn btn--outline btn--sm" data-modal-open="modal-link-guardian">＋ Asociază părinte</button>
+      </div>
       <div class="stack">
         <?php foreach ($guardians as $guardian): ?>
-          <div class="content-row">
-            <span class="avatar avatar--sm avatar--sage" aria-hidden="true"><?= e(initials($guardian['first_name'], $guardian['last_name'])) ?></span>
-            <div class="content-row__main">
-              <div class="content-row__title"><?= e($guardian['first_name'] . ' ' . $guardian['last_name']) ?></div>
-              <div class="content-row__meta"><?= e($guardian['relationship']) ?> • <?= e($guardian['phone'] ?: 'fără telefon') ?> • <?= e($guardian['email'] ?: 'fără e-mail') ?></div>
+          <?php $gid = $guardian['id'] ?? $guardian['guardian_id'] ?? '1'; ?>
+          <div class="card card--flat">
+            <div class="row row--between">
+              <div class="row row--start">
+                <span class="avatar avatar--sm avatar--sage" aria-hidden="true"><?= e(initials($guardian['first_name'], $guardian['last_name'])) ?></span>
+                <div class="content-row__main">
+                  <div class="content-row__title">
+                    <?= e($guardian['first_name'] . ' ' . $guardian['last_name']) ?>
+                    <span class="badge badge--neutral"><?= e($guardian['relationship'] ?: 'Părinte') ?></span>
+                  </div>
+                  <div class="content-row__meta">
+                    <strong>📞 <?= e($guardian['phone'] ?: 'Fără telefon consemnat') ?></strong>
+                    • <?= e($guardian['email'] ?: 'Fără e-mail') ?>
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="btn btn--ghost btn--sm" data-modal-open="modal-edit-guardian-<?= e($gid) ?>">✏️ Editează contact</button>
             </div>
           </div>
         <?php endforeach; ?>
+        <?php if (empty($guardians)): ?>
+          <div class="empty-state">
+            <div>
+              <p class="empty-state__text">Niciun părinte asociat acestui elev.</p>
+              <button type="button" class="btn btn--primary btn--sm" data-modal-open="modal-link-guardian">Asociază un părinte</button>
+            </div>
+          </div>
+        <?php endif; ?>
       </div>
     </article>
 
@@ -126,6 +153,137 @@
     </article>
   </aside>
 </section>
+
+<div id="modal-edit-student" class="modal-backdrop" aria-hidden="true">
+  <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-student-title">
+    <h2 class="modal-title" id="edit-student-title">Editează datele elevului</h2>
+    <p class="modal-description">Actualizează numele, datele de contact sau inițiala tatălui.</p>
+
+    <form action="/teacher/students/<?= e($student['id']) ?>/edit" method="POST" class="form-stack">
+      <?= csrf_field() ?>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="edit_last_name">Nume de familie</label>
+          <input type="text" id="edit_last_name" name="last_name" class="form-control" value="<?= e($student['last_name']) ?>" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_first_name">Prenume</label>
+          <input type="text" id="edit_first_name" name="first_name" class="form-control" value="<?= e($student['first_name']) ?>" required>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="edit_father_initial">Inițială tată</label>
+          <input type="text" id="edit_father_initial" name="father_initial" maxlength="3" class="form-control" value="<?= e(rtrim($student['father_initial'] ?? '', '.')) ?>">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_phone">Telefon elev</label>
+          <input type="tel" id="edit_phone" name="phone" class="form-control" value="<?= e($student['phone'] ?? '') ?>" placeholder="07xx xxx xxx">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="edit_email">E-mail elev</label>
+        <input type="email" id="edit_email" name="email" class="form-control" value="<?= e($student['email'] ?? '') ?>" placeholder="elev@exemplu.ro">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn--ghost" data-modal-close>Renunță</button>
+        <button type="submit" class="btn btn--primary">Salvează modificările elevului</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<?php foreach ($guardians as $guardian): ?>
+  <?php $gid = $guardian['id'] ?? $guardian['guardian_id'] ?? '1'; ?>
+  <div id="modal-edit-guardian-<?= e($gid) ?>" class="modal-backdrop" aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-guardian-title-<?= e($gid) ?>">
+      <h2 class="modal-title" id="edit-guardian-title-<?= e($gid) ?>">Editează contact părinte: <?= e($guardian['first_name'] . ' ' . $guardian['last_name']) ?></h2>
+      <p class="modal-description">Dacă părintele și-a schimbat numărul de telefon sau e-mailul, le poți actualiza imediat aici.</p>
+
+      <form action="/teacher/guardians/<?= e($gid) ?>/edit" method="POST" class="form-stack">
+        <?= csrf_field() ?>
+        <input type="hidden" name="return_student_id" value="<?= e($student['id']) ?>">
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="g_last_name_<?= e($gid) ?>">Nume</label>
+            <input type="text" id="g_last_name_<?= e($gid) ?>" name="last_name" class="form-control" value="<?= e($guardian['last_name']) ?>" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="g_first_name_<?= e($gid) ?>">Prenume</label>
+            <input type="text" id="g_first_name_<?= e($gid) ?>" name="first_name" class="form-control" value="<?= e($guardian['first_name']) ?>" required>
+          </div>
+        </div>
+
+        <div class="card card--flat">
+          <div class="form-group">
+            <label class="form-label" for="g_phone_<?= e($gid) ?>">Număr de telefon părinte</label>
+            <input type="tel" id="g_phone_<?= e($gid) ?>" name="phone" class="form-control" value="<?= e($guardian['phone'] ?? '') ?>" placeholder="07xx xxx xxx">
+            <span class="form-hint">Numărul apelabil direct pentru urgențe și mesaje.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="g_email_<?= e($gid) ?>">E-mail părinte</label>
+            <input type="email" id="g_email_<?= e($gid) ?>" name="email" class="form-control" value="<?= e($guardian['email'] ?? '') ?>" placeholder="parinte@familie.ro">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="g_rel_<?= e($gid) ?>">Relație / Calitate</label>
+          <input type="text" id="g_rel_<?= e($gid) ?>" name="relationship" class="form-control" value="<?= e($guardian['relationship'] ?? 'Părinte') ?>" placeholder="Mamă, Tată, Tutore">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn--ghost" data-modal-close>Renunță</button>
+          <button type="submit" class="btn btn--primary">Salvează datele părintelui</button>
+        </div>
+      </form>
+    </section>
+  </div>
+<?php endforeach; ?>
+
+<div id="modal-link-guardian" class="modal-backdrop" aria-hidden="true">
+  <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="link-guardian-title">
+    <h2 class="modal-title" id="link-guardian-title">Asociază un părinte pentru <?= e($student['first_name']) ?></h2>
+    <p class="modal-description">Alege un părinte existent din catalog sau înregistrează un părinte nou.</p>
+
+    <form action="/teacher/students/<?= e($student['id']) ?>/link-guardian" method="POST" class="form-stack">
+      <?= csrf_field() ?>
+
+      <div class="form-group">
+        <label class="form-label" for="assoc_guardian_id">Alege dintre părinții existenți</label>
+        <select id="assoc_guardian_id" name="guardian_id" class="form-control">
+          <option value="">-- Sau introdu datele unui părinte nou mai jos --</option>
+          <?php foreach (($allGuardians ?? []) as $ag): ?>
+            <?php
+            $agName = trim(($ag['first_name'] ?? '') . ' ' . ($ag['last_name'] ?? ''));
+            $agPhone = $ag['phone'] ?? '';
+            ?>
+            <option value="<?= e($ag['id']) ?>"><?= e($agName) ?><?= $agPhone ? ' (📞 ' . e($agPhone) . ')' : '' ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div class="card card--flat">
+        <div class="form-group"><span class="badge badge--brand">Sau părinte nou</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="assoc_guardian_name">Nume complet părinte</label>
+            <input type="text" id="assoc_guardian_name" name="guardian_name" class="form-control" placeholder="Ion Popescu">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="assoc_guardian_phone">Telefon părinte</label>
+            <input type="tel" id="assoc_guardian_phone" name="guardian_phone" class="form-control" placeholder="07xx xxx xxx">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn--ghost" data-modal-close>Renunță</button>
+        <button type="submit" class="btn btn--primary">Asociază la elev</button>
+      </div>
+    </form>
+  </section>
+</div>
 
 <div id="modal-create-feedback" class="modal-backdrop" aria-hidden="true">
   <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">

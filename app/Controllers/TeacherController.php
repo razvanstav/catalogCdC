@@ -191,6 +191,7 @@ class TeacherController
 
         $groups = $this->groupRepo->getGroupsForStudent($id);
         $guardians = $this->studentRepo->getGuardiansForStudent($id);
+        $allGuardians = $this->userRepo->getAllGuardians();
         $attendance = $this->attendanceRepo->getForStudent($id);
         $results = $this->assessmentRepo->getResultsForStudent($id, 'teacher');
         $feedbacks = $this->feedbackRepo->getForStudent($id);
@@ -200,6 +201,7 @@ class TeacherController
             'student' => $student,
             'groups' => $groups,
             'guardians' => $guardians,
+            'allGuardians' => $allGuardians,
             'attendance' => $attendance,
             'results' => $results,
             'feedbacks' => $feedbacks,
@@ -251,6 +253,92 @@ class TeacherController
         }
 
         Response::redirect('/teacher/students');
+    }
+
+    public function updateStudent(string $id): void
+    {
+        $first = trim(Request::input('first_name') ?? '');
+        $last = trim(Request::input('last_name') ?? '');
+        $initial = trim(Request::input('father_initial') ?? '');
+        $email = trim(Request::input('email') ?? '');
+        $phone = trim(Request::input('phone') ?? '');
+
+        if ($first && $last) {
+            $this->studentRepo->update($id, [
+                'first_name' => $first,
+                'last_name' => $last,
+                'father_initial' => $initial ?: null,
+                'email' => $email ?: null,
+                'phone' => $phone ?: null,
+            ]);
+            Session::flash('success', 'Datele elevului au fost actualizate cu succes!');
+        } else {
+            Session::flash('error', 'Numele și prenumele sunt obligatorii.');
+        }
+
+        Response::redirect("/teacher/students/$id");
+    }
+
+    public function updateGuardian(string $id): void
+    {
+        $studentId = Request::input('return_student_id');
+        $first = trim(Request::input('first_name') ?? '');
+        $last = trim(Request::input('last_name') ?? '');
+        $phone = trim(Request::input('phone') ?? '');
+        $email = trim(Request::input('email') ?? '');
+        $relationship = trim(Request::input('relationship') ?? 'Părinte');
+
+        if ($first && $last) {
+            $this->userRepo->updateGuardian($id, [
+                'first_name' => $first,
+                'last_name' => $last,
+                'phone' => $phone ?: null,
+                'email' => $email ?: null,
+                'relationship' => $relationship,
+            ]);
+            Session::flash('success', 'Datele de contact ale părintelui au fost actualizate cu succes!');
+        } else {
+            Session::flash('error', 'Numele și prenumele părintelui sunt obligatorii.');
+        }
+
+        if ($studentId) {
+            Response::redirect("/teacher/students/$studentId");
+        } else {
+            Response::redirect('/teacher/students');
+        }
+    }
+
+    public function linkGuardianToStudent(string $studentId): void
+    {
+        $guardianId = Request::input('guardian_id');
+        $guardianName = trim(Request::input('guardian_name') ?? '');
+        $guardianPhone = trim(Request::input('guardian_phone') ?? '');
+
+        if ($guardianId) {
+            $this->userRepo->linkGuardianToStudent($studentId, $guardianId);
+            Session::flash('success', 'Părintele a fost asociat elevului!');
+        } elseif ($guardianName) {
+            $parts = explode(' ', $guardianName, 2);
+            $gFirst = $parts[0];
+            $gLast = $parts[1] ?? 'Familie';
+            $gEmail = 'parinte.' . strtolower($gFirst . '.' . $gLast) . '.' . bin2hex(random_bytes(2)) . '@familie.ro';
+            $now = date('Y-m-d H:i:s');
+            $uId = 'usr_' . bin2hex(random_bytes(6));
+            $gId = 'grd_' . bin2hex(random_bytes(6));
+
+            \App\Support\Database::execute(
+                "INSERT INTO users (id, email, username, password_hash, role, first_name, last_name, phone, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, 'parent', ?, ?, ?, 1, ?, ?)",
+                [$uId, $gEmail, strtolower($gFirst . '.' . $gLast), password_hash('parinte123', PASSWORD_DEFAULT), $gFirst, $gLast, $guardianPhone ?: null, $now, $now]
+            );
+            \App\Support\Database::execute(
+                "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, phone, email, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, ?, ?)",
+                [$gId, $uId, $gFirst, $gLast, $guardianPhone ?: null, $gEmail, $now, $now]
+            );
+            $this->userRepo->linkGuardianToStudent($studentId, $gId);
+            Session::flash('success', 'Părintele nou a fost înregistrat și asociat elevului!');
+        }
+
+        Response::redirect("/teacher/students/$studentId");
     }
 
     public function updateStudentNotes(string $id): void
