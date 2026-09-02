@@ -17,11 +17,20 @@ class SecurityAndReBACTest
     private StudentRepository $studentRepo;
     private AssessmentRepository $assessmentRepo;
 
+    private ?\PDO $testPdo = null;
+
     public function __construct()
     {
+        $this->testPdo = Database::createInMemoryTestPdo();
+        Database::setPdo($this->testPdo);
         $this->authService = new AuthService();
         $this->studentRepo = new StudentRepository();
         $this->assessmentRepo = new AssessmentRepository();
+    }
+
+    public function __destruct()
+    {
+        Database::setPdo(null);
     }
 
     public function runAll(): array

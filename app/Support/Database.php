@@ -9,6 +9,23 @@ class Database
 {
     private static ?PDO $pdo = null;
 
+    public static function setPdo(?PDO $pdo): void
+    {
+        self::$pdo = $pdo;
+    }
+
+    public static function createInMemoryTestPdo(): PDO
+    {
+        $pdo = new PDO("sqlite::memory:", null, null, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+        self::initializeSqliteSchema($pdo);
+        self::ensureMigrations($pdo);
+        \Database\Seeds\DemoSeeder::seed($pdo);
+        return $pdo;
+    }
+
     public static function connect(): PDO
     {
         if (self::$pdo !== null) {
