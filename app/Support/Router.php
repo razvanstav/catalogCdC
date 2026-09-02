@@ -39,7 +39,7 @@ class Router
             $pattern = '#^' . $pattern . '$#';
 
             if (preg_match($pattern, $uri, $matches)) {
-                $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
+                $params = array_values(array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
 
                 // Run Middlewares
                 foreach ($route['middleware'] as $mw) {
@@ -79,6 +79,8 @@ class Router
 
     private static function callHandler($handler, array $params = []): void
     {
+        $params = array_values($params);
+
         if (is_callable($handler)) {
             call_user_func_array($handler, $params);
             return;

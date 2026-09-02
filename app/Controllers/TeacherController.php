@@ -1007,8 +1007,9 @@ class TeacherController
         Response::redirect($returnUrl);
     }
 
-    public function addSchedule(string $groupId): void
+    public function addSchedule(string $id): void
     {
+        $groupId = $id;
         $dayOfWeek = (int)Request::input('day_of_week', 1);
         $startTime = Request::input('start_time', '16:00');
         $durationMinutes = (int)Request::input('duration_minutes', 0);
@@ -1031,8 +1032,9 @@ class TeacherController
         Response::redirect($returnUrl);
     }
 
-    public function deleteSchedule(string $groupId, string $scheduleId): void
+    public function deleteSchedule(string $id, string $scheduleId): void
     {
+        $groupId = $id;
         if ($scheduleId) {
             $this->groupRepo->deleteSchedule($scheduleId);
             Session::flash('success', 'Intervalul de orar a fost șters din grupă.');
@@ -1040,8 +1042,9 @@ class TeacherController
         Response::redirect("/teacher/groups/$groupId");
     }
 
-    public function generateRecurringLessons(string $groupId): void
+    public function generateRecurringLessons(string $id): void
     {
+        $groupId = $id;
         $weeks = (int)Request::input('weeks', 4);
         $count = $this->groupRepo->generateRecurringLessons($groupId, $weeks);
         Session::flash('success', "Au fost generate {$count} ședințe recurente pentru următoarele {$weeks} săptămâni!");
