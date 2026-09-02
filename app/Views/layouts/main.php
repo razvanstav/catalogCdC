@@ -23,8 +23,6 @@ $assetVersion = static function (string $assetPath): string {
   <a class="skip-link" href="#main-content">Sari la conținut</a>
 
   <div class="app-wrapper">
-    <?php \App\Support\View::component('demobar'); ?>
-
     <?php if (\App\Support\Settings::isVacationMode()): ?>
       <aside class="vacation-banner" aria-label="Notificare mod vacanță">
         <div class="vacation-banner__content">

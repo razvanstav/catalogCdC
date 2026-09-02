@@ -13,11 +13,9 @@ Router::get('/', function () {
     Response::redirect('/login');
 });
 
-// Authentication & Demo Switcher
+// Authentication
 Router::get('/login', 'AuthController@showLogin');
 Router::post('/login', 'AuthController@login', ['csrf']);
-Router::get('/demo/{role}', 'AuthController@demoSwitch');
-Router::get('/demo/{role}/{studentId}', 'AuthController@demoSwitch');
 Router::get('/logout', 'AuthController@logout');
 
 // ==========================================

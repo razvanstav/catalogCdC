@@ -46,13 +46,6 @@ class AuthController
         }
     }
 
-    public function demoSwitch(string $role, ?string $studentId = null): void
-    {
-        $this->authService->loginAsDemo($role, $studentId);
-        Session::flash('success', 'Comutare automată de rol activă (' . ucfirst($role) . ').');
-        Response::redirect('/' . $role . '/dashboard');
-    }
-
     public function logout(): void
     {
         $this->authService->logout();

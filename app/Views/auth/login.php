@@ -23,16 +23,5 @@
     <button type="submit" class="btn btn--primary btn--lg btn--block">Autentificare în Cont</button>
   </form>
 
-  <div class="divider-label">sau acces direct demo</div>
-
-  <section class="demo-login-panel" aria-labelledby="demo-login-title">
-    <h2 class="sr-only" id="demo-login-title">Acces rapid demonstrativ</h2>
-    <div class="demo-login-actions">
-      <a href="/demo/parent/stu_matei_popescu" class="btn btn--sage btn--block">Login Părinte (Demo)</a>
-      <a href="/demo/student" class="btn btn--outline btn--block">Login Elev (Demo)</a>
-      <a href="/demo/teacher" class="btn btn--ghost btn--block">Login Profesor / Admin</a>
-    </div>
-  </section>
-
-  <p class="form-hint text-center">Conturile de acces sunt create și distribuite exclusiv de profesoară din panoul de administrare.</p>
+  <p class="form-hint text-center">Conturile de acces sunt create și distribuite de profesoară din panoul de administrare.</p>
 </div>
