@@ -107,14 +107,6 @@ $tone = ui_tone_class($group['id']);
               </div>
             </div>
           </div>
-        <?php else: ?>
-          <div class="form-actions">
-            <form action="/teacher/groups/<?= e($group['id']) ?>/generate-lessons" method="POST" class="inline-form">
-              <?= csrf_field() ?>
-              <input type="hidden" name="weeks" value="4">
-              <button type="submit" class="btn btn--sage btn--sm">⚡ Generează ședințele recurente (următoarele 4 săptămâni)</button>
-            </form>
-          </div>
         <?php endif; ?>
       </div>
     </article>
