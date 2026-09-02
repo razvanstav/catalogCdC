@@ -43,6 +43,50 @@ class ConversationRepository
         return $convs;
     }
 
+    public function getForStudent(string $studentId): array
+    {
+        $convs = Database::query("
+            SELECT c.*, t.title as teacher_title, u.first_name as teacher_first_name, u.last_name as teacher_last_name, u.phone as teacher_phone,
+                   s.first_name as student_first_name, s.last_name as student_last_name
+            FROM conversations c
+            INNER JOIN teacher_profiles t ON c.teacher_id = t.id
+            INNER JOIN users u ON t.user_id = u.id
+            LEFT JOIN student_profiles s ON c.student_id = s.id
+            WHERE c.student_id = ?
+            ORDER BY c.updated_at DESC
+        ", [$studentId]);
+
+        foreach ($convs as &$c) {
+            $c['messages'] = $this->getMessages($c['id']);
+        }
+        return $convs;
+    }
+
+    public function getOrCreateForStudent(string $studentId): array
+    {
+        $convs = $this->getForStudent($studentId);
+        if (!empty($convs)) {
+            return $convs;
+        }
+
+        $teacher = Database::queryOne("SELECT id FROM teacher_profiles LIMIT 1");
+        if (!$teacher) {
+            return [];
+        }
+
+        $link = Database::queryOne("SELECT guardian_id FROM guardian_student_links WHERE student_id = ? AND status = 'active' LIMIT 1", [$studentId]);
+        $guardianId = $link['guardian_id'] ?? 'grd_direct_' . $studentId;
+
+        $convId = 'cnv_' . bin2hex(random_bytes(6));
+        $now = date('Y-m-d H:i:s');
+        Database::execute(
+            "INSERT INTO conversations (id, teacher_id, guardian_id, student_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [$convId, $teacher['id'], $guardianId, $studentId, $now, $now]
+        );
+
+        return $this->getForStudent($studentId);
+    }
+
     public function getMessages(string $conversationId): array
     {
         return Database::query("

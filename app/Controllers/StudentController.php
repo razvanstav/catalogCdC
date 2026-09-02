@@ -10,6 +10,7 @@ use App\Repositories\AssessmentRepository;
 use App\Repositories\FeedbackRepository;
 use App\Repositories\AnnouncementRepository;
 use App\Repositories\GoalRepository;
+use App\Repositories\ConversationRepository;
 use App\Policies\AuthorizationPolicy;
 use App\Support\Request;
 use App\Support\Response;
@@ -26,6 +27,7 @@ class StudentController
     private FeedbackRepository $feedbackRepo;
     private AnnouncementRepository $announcementRepo;
     private GoalRepository $goalRepo;
+    private ConversationRepository $conversationRepo;
 
     public function __construct()
     {
@@ -37,6 +39,7 @@ class StudentController
         $this->feedbackRepo = new FeedbackRepository();
         $this->announcementRepo = new AnnouncementRepository();
         $this->goalRepo = new GoalRepository();
+        $this->conversationRepo = new ConversationRepository();
     }
 
     private function getStudent(): ?array
@@ -214,5 +217,44 @@ class StudentController
             'student' => $student,
             'announcements' => $announcements,
         ]);
+    }
+
+    public function attendance(): void
+    {
+        $student = $this->getStudent();
+        if (!$student) Response::notFound();
+
+        $records = $this->attendanceRepo->getForStudent($student['id']);
+        View::render('student/attendance', [
+            'student' => $student,
+            'records' => $records,
+        ]);
+    }
+
+    public function conversations(): void
+    {
+        $student = $this->getStudent();
+        if (!$student) Response::notFound();
+
+        $conversations = $this->conversationRepo->getOrCreateForStudent($student['id']);
+        $activeConv = $conversations[0] ?? null;
+
+        View::render('student/conversations', [
+            'student' => $student,
+            'conversations' => $conversations,
+            'activeConv' => $activeConv,
+        ]);
+    }
+
+    public function sendMessage(): void
+    {
+        $convId = Request::input('conversation_id');
+        $content = Request::input('content');
+        $user = Session::user();
+
+        if ($convId && $content) {
+            $this->conversationRepo->sendMessage($convId, 'student', $user['id'], $content);
+        }
+        Response::redirect('/student/conversations');
     }
 }

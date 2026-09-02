@@ -137,6 +137,18 @@ if (!function_exists('group_type_label')) {
     }
 }
 
+if (!function_exists('feedback_category_label')) {
+    function feedback_category_label(string $category): string
+    {
+        switch ($category) {
+            case 'progress': return 'Progres și implicare';
+            case 'encouragement': return 'Încurajare';
+            case 'attention': return 'Recomandare calmă';
+            default: return ucfirst($category);
+        }
+    }
+}
+
 if (!function_exists('attendance_status_label')) {
     function attendance_status_label(string $status): string
     {

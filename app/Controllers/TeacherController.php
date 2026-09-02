@@ -262,6 +262,8 @@ class TeacherController
         $initial = trim(Request::input('father_initial') ?? '');
         $email = trim(Request::input('email') ?? '');
         $phone = trim(Request::input('phone') ?? '');
+        $username = trim(Request::input('username') ?? '');
+        $password = trim(Request::input('password') ?? '');
 
         if ($first && $last) {
             $this->studentRepo->update($id, [
@@ -270,8 +272,10 @@ class TeacherController
                 'father_initial' => $initial ?: null,
                 'email' => $email ?: null,
                 'phone' => $phone ?: null,
+                'username' => $username ?: null,
+                'password' => $password ?: null,
             ]);
-            Session::flash('success', 'Datele elevului au fost actualizate cu succes!');
+            Session::flash('success', 'Datele elevului și credențialele de acces au fost actualizate cu succes!');
         } else {
             Session::flash('error', 'Numele și prenumele sunt obligatorii.');
         }

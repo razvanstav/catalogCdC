@@ -44,6 +44,7 @@ $parentNav = [
   ['/parent/timetable', 'clock', 'Orar'],
   ['/parent/attendance', 'attendance', 'Prezență'],
   ['/parent/assignments', 'document', 'Teme'],
+  ['/parent/materials', 'book', 'Materiale'],
   ['/parent/results', 'result', 'Rezultate'],
   ['/parent/feedback', 'spark', 'Aprecieri'],
   ['/parent/goals', 'goal', 'Obiective'],
@@ -54,12 +55,14 @@ $parentNav = [
 $studentNav = [
   ['/student/dashboard', 'home', 'Acasă'],
   ['/student/timetable', 'clock', 'Orarul meu'],
+  ['/student/attendance', 'attendance', 'Prezență'],
   ['/student/assignments', 'document', 'Teme'],
   ['/student/materials', 'book', 'Materiale'],
   ['/student/results', 'result', 'Rezultate'],
   ['/student/feedback', 'spark', 'Aprecieri'],
   ['/student/goals', 'goal', 'Obiective'],
   ['/student/announcements', 'announce', 'Anunțuri'],
+  ['/student/conversations', 'chat', 'Conversații'],
 ];
 
 $navItems = $role === 'teacher' ? $teacherNav : ($role === 'parent' ? $parentNav : $studentNav);
@@ -76,16 +79,18 @@ $mobileItems = $role === 'teacher'
       ? [
           ['/parent/dashboard', 'home', 'Acasă'],
           ['/parent/timetable', 'clock', 'Orar'],
+          ['/parent/attendance', 'attendance', 'Prezență'],
           ['/parent/assignments', 'document', 'Teme'],
-          ['/parent/conversations', 'chat', 'Chat'],
           ['/parent/results', 'result', 'Rezultate'],
+          ['/parent/conversations', 'chat', 'Chat'],
         ]
       : [
           ['/student/dashboard', 'home', 'Acasă'],
           ['/student/timetable', 'clock', 'Orar'],
+          ['/student/attendance', 'attendance', 'Prezență'],
           ['/student/assignments', 'document', 'Teme'],
           ['/student/results', 'result', 'Rezultate'],
-          ['/student/goals', 'goal', 'Obiective'],
+          ['/student/conversations', 'chat', 'Chat'],
         ]);
 ?>
 <aside class="app-sidebar" id="app-sidebar" aria-label="Navigație principală">

@@ -208,4 +208,16 @@ class ParentController
         }
         Response::redirect('/parent/conversations');
     }
+
+    public function materials(): void
+    {
+        $child = $this->getActiveChild();
+        if (!$child) Response::notFound();
+
+        $materials = $this->assignmentRepo->getMaterialsForStudent($child['id']);
+        View::render('parent/materials', [
+            'child' => $child,
+            'materials' => $materials,
+        ]);
+    }
 }

@@ -88,6 +88,7 @@ Router::get('/parent/child/{studentId}', 'ParentController@switchChild', ['paren
 Router::get('/parent/timetable', 'ParentController@timetable', ['parent']);
 Router::get('/parent/attendance', 'ParentController@attendance', ['parent']);
 Router::get('/parent/assignments', 'ParentController@assignments', ['parent']);
+Router::get('/parent/materials', 'ParentController@materials', ['parent']);
 Router::get('/parent/results', 'ParentController@results', ['parent']);
 Router::get('/parent/feedback', 'ParentController@feedback', ['parent']);
 Router::get('/parent/goals', 'ParentController@goals', ['parent']);
@@ -100,6 +101,7 @@ Router::post('/parent/conversations/message', 'ParentController@sendMessage', ['
 // ==========================================
 Router::get('/student/dashboard', 'StudentController@dashboard', ['student']);
 Router::get('/student/timetable', 'StudentController@timetable', ['student']);
+Router::get('/student/attendance', 'StudentController@attendance', ['student']);
 Router::get('/student/assignments', 'StudentController@assignments', ['student']);
 Router::post('/student/assignments/{id}/submit', 'StudentController@submitAssignment', ['student', 'csrf']);
 Router::get('/student/materials', 'StudentController@materials', ['student']);
@@ -109,3 +111,5 @@ Router::get('/student/goals', 'StudentController@goals', ['student']);
 Router::get('/student/goals/toggle/{id}', 'StudentController@toggleGoal', ['student']);
 Router::post('/student/goals', 'StudentController@addGoal', ['student', 'csrf']);
 Router::get('/student/announcements', 'StudentController@announcements', ['student']);
+Router::get('/student/conversations', 'StudentController@conversations', ['student']);
+Router::post('/student/conversations/message', 'StudentController@sendMessage', ['student', 'csrf']);

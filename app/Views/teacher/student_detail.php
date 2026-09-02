@@ -8,7 +8,7 @@
       <div>
         <div class="page-kicker"><span class="badge badge--brand">Dosar individual</span></div>
         <h1 class="page-title"><?= e(trim($student['first_name'] . ' ' . ($student['father_initial'] ?? '') . ' ' . $student['last_name'])) ?></h1>
-        <p class="page-subtitle"><?= e($student['email'] ?: 'E-mail nespecificat') ?> • <?= e($student['phone'] ?: 'Telefon nespecificat') ?></p>
+        <p class="page-subtitle"><?= e($student['email'] ?: 'E-mail nespecificat') ?> • <?= e($student['phone'] ?: 'Telefon nespecificat') ?> • <strong>Utilizator:</strong> <?= e($student['username'] ?? 'fără cont utilizator') ?></p>
       </div>
     </div>
     <div class="page-actions">
@@ -30,71 +30,72 @@
       </div>
       <form action="/teacher/students/<?= e($student['id']) ?>/notes" method="POST" class="form-stack">
         <?= csrf_field() ?>
-        <div class="form-group">
-          <label class="form-label" for="private_notes">Observații interne</label>
-          <textarea id="private_notes" name="private_notes" class="form-control" placeholder="Dificultăți, ritm de lucru, teme de reluat..." rows="6"><?= e($student['private_notes'] ?? '') ?></textarea>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn--amber">Salvează notița privată</button>
-        </div>
+        <label class="sr-only" for="private_notes">Notițe private</label>
+        <textarea id="private_notes" name="notes" class="form-control" placeholder="Scrie aici observații pedagogice, ritmul de lucru, nevoi speciale..."><?= e($student['private_notes'] ?? '') ?></textarea>
+        <button type="submit" class="btn btn--outline btn--sm">Salvează notița privată</button>
       </form>
     </article>
 
     <article class="card">
-      <div class="card-header">
-        <div class="card-header__copy">
-          <h2 class="card-title">Istoric evaluări</h2>
-          <p class="card-description">Scoruri, feedback public și note interne</p>
-        </div>
-        <span class="badge badge--neutral"><?= count($results) ?> rezultate</span>
-      </div>
+      <div class="card-header"><div class="card-header__copy"><h2 class="card-title">Feedback publicat</h2><p class="card-description">Mesajele vizibile familiei</p></div></div>
       <div class="stack">
-        <?php foreach ($results as $result): ?>
-          <article class="card card--flat result-card">
-            <div>
-              <div class="page-kicker">
-                <span class="badge badge--brand"><?= e($result['group_name']) ?></span>
-                <span class="badge badge--neutral"><?= format_date_ro($result['assessment_date']) ?></span>
-              </div>
-              <h3 class="card-title"><?= e($result['assessment_title']) ?></h3>
-              <?php if (!empty($result['published_feedback'])): ?>
-                <div class="feedback-card">
-                  <div class="feedback-card__header"><span class="badge badge--sage">Feedback publicat</span></div>
-                  <p class="feedback-card__text"><?= e($result['published_feedback']) ?></p>
-                </div>
-              <?php endif; ?>
-              <?php if (!empty($result['private_teacher_notes'])): ?>
-                <div class="private-note">
-                  <div class="private-note__header"><span class="private-note__title">Notiță internă</span></div>
-                  <p class="private-note__text"><?= e($result['private_teacher_notes']) ?></p>
-                </div>
-              <?php endif; ?>
+        <?php foreach ($feedbacks as $feedback): ?>
+          <div class="content-row">
+            <span class="tone-dot" aria-hidden="true"></span>
+            <div class="content-row__main">
+              <div class="content-row__title"><?= e($feedback['content']) ?></div>
+              <div class="content-row__meta"><?= e(feedback_category_label($feedback['category'])) ?> • <?= format_date_ro($feedback['created_at']) ?></div>
             </div>
-            <div class="result-score">
-              <div class="result-score__value"><?= number_format((float)$result['score'], 2) ?></div>
-              <div class="result-score__max">scor</div>
-            </div>
-          </article>
+          </div>
         <?php endforeach; ?>
-        <?php if (empty($results)): ?><div class="empty-state"><div><p class="empty-state__text">Nu există evaluări consemnate încă.</p></div></div><?php endif; ?>
+        <?php if (empty($feedbacks)): ?><div class="empty-state">Nu există feedback publicat încă.</div><?php endif; ?>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><div class="card-header__copy"><h2 class="card-title">Rezultate la verificări</h2><p class="card-description">Notele și aprecierile acordate</p></div></div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Verificare</th>
+              <th>Data</th>
+              <th>Notă / Punctaj</th>
+              <th>Feedback public</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($results as $result): ?>
+              <tr>
+                <td><strong><?= e($result['assessment_title']) ?></strong></td>
+                <td><?= format_date_ro($result['assessment_date']) ?></td>
+                <td><span class="badge badge--paid"><?= e((string)$result['score']) ?> / <?= e((string)$result['max_score']) ?></span></td>
+                <td><?= e($result['published_feedback'] ?: '—') ?></td>
+              </tr>
+            <?php endforeach; ?>
+            <?php if (empty($results)): ?>
+              <tr><td colspan="4" class="empty-state">Niciun rezultat înregistrat încă.</td></tr>
+            <?php endif; ?>
+          </tbody>
+        </table>
       </div>
     </article>
   </div>
 
   <aside class="stack stack--lg">
-    <article class="card card--sage">
-      <div class="card-header">
-        <div class="card-header__copy"><h2 class="card-title">Aprecieri publicate</h2><p class="card-description">Vizibile familiei și elevului</p></div>
-        <button type="button" class="btn btn--outline btn--sm" data-modal-open="modal-create-feedback">Adaugă</button>
-      </div>
-      <div class="stack">
-        <?php foreach ($feedbacks as $feedback): ?>
-          <article class="feedback-card">
-            <div class="feedback-card__header"><span class="badge badge--sage">Publicat</span><small><?= format_date_ro($feedback['created_at']) ?></small></div>
-            <p class="feedback-card__text"><?= e($feedback['content']) ?></p>
-          </article>
-        <?php endforeach; ?>
-        <?php if (empty($feedbacks)): ?><div class="empty-state"><div><p class="empty-state__text">Nicio apreciere publicată încă.</p></div></div><?php endif; ?>
+    <article class="card">
+      <div class="card-header"><div class="card-header__copy"><h2 class="card-title">Stare financiară</h2><p class="card-description">Statutul abonamentului</p></div></div>
+      <div class="row row--between">
+        <div>
+          <div class="content-row__title">Plata orelor</div>
+          <div class="content-row__meta"><?= !empty($student['is_paid']) ? 'La zi cu plățile' : 'Necesită atenție' ?></div>
+        </div>
+        <form action="/teacher/students/<?= e($student['id']) ?>/toggle-paid" method="POST">
+          <?= csrf_field() ?>
+          <button type="submit" class="btn <?= !empty($student['is_paid']) ? 'btn--outline' : 'btn--amber' ?> btn--sm">
+            <?= !empty($student['is_paid']) ? 'Marchează neplătit' : 'Marchează achitat' ?>
+          </button>
+        </form>
       </div>
     </article>
 
@@ -156,8 +157,8 @@
 
 <div id="modal-edit-student" class="modal-backdrop" aria-hidden="true">
   <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-student-title">
-    <h2 class="modal-title" id="edit-student-title">Editează datele elevului</h2>
-    <p class="modal-description">Actualizează numele, datele de contact sau inițiala tatălui.</p>
+    <h2 class="modal-title" id="edit-student-title">Editează datele și accesul elevului</h2>
+    <p class="modal-description">Actualizează numele, datele de contact, utilizatorul și parola de conectare.</p>
 
     <form action="/teacher/students/<?= e($student['id']) ?>/edit" method="POST" class="form-stack">
       <?= csrf_field() ?>
@@ -185,6 +186,23 @@
         <label class="form-label" for="edit_email">E-mail elev</label>
         <input type="email" id="edit_email" name="email" class="form-control" value="<?= e($student['email'] ?? '') ?>" placeholder="elev@exemplu.ro">
       </div>
+
+      <div class="card card--flat">
+        <div class="form-group"><span class="badge badge--brand">Conectare elev (Cont acces)</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="edit_username">Utilizator (username)</label>
+            <input type="text" id="edit_username" name="username" class="form-control" value="<?= e($student['username'] ?? '') ?>" placeholder="ex: ion.popescu">
+            <span class="form-hint">Numele cu care elevul se autentifică în catalog.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit_password">Parolă nouă login</label>
+            <input type="password" id="edit_password" name="password" class="form-control" placeholder="Lasă gol pentru a păstra parola actuală">
+            <span class="form-hint">Scrie aici dacă vrei să-i setezi o parolă nouă.</span>
+          </div>
+        </div>
+      </div>
+
       <div class="modal-actions">
         <button type="button" class="btn btn--ghost" data-modal-close>Renunță</button>
         <button type="submit" class="btn btn--primary">Salvează modificările elevului</button>
