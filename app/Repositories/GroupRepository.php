@@ -6,8 +6,12 @@ use App\Support\Database;
 
 class GroupRepository
 {
-    public function all(): array
+    public function all(?string $workspaceId = null): array
     {
+        $wsId = $workspaceId ?? (function_exists('workspace_id') ? workspace_id() : null);
+        if ($wsId) {
+            return Database::query("SELECT * FROM groups WHERE workspace_id = ? ORDER BY name ASC", [$wsId]);
+        }
         return Database::query("SELECT * FROM groups ORDER BY name ASC");
     }
 
@@ -31,11 +35,12 @@ class GroupRepository
     {
         $id = 'grp_' . bin2hex(random_bytes(6));
         $now = date('Y-m-d H:i:s');
+        $wsId = $data['workspace_id'] ?? (function_exists('workspace_id') ? workspace_id() : null) ?? 'ws_radu_teodorescu';
         Database::execute(
             "INSERT INTO groups (id, workspace_id, name, type, description, color_tag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 $id,
-                $data['workspace_id'] ?? 'ws_radu_teodorescu',
+                $wsId,
                 $data['name'],
                 $data['type'] ?? 'tutoring_group',
                 $data['description'] ?? null,
@@ -51,6 +56,16 @@ class GroupRepository
     {
         if ($groupId) {
             return Database::query("SELECT * FROM group_schedules WHERE group_id = ? ORDER BY day_of_week, start_time", [$groupId]);
+        }
+        $wsId = function_exists('workspace_id') ? workspace_id() : null;
+        if ($wsId) {
+            return Database::query("
+                SELECT s.*, g.name as group_name, g.color_tag as group_color
+                FROM group_schedules s
+                INNER JOIN groups g ON s.group_id = g.id
+                WHERE g.workspace_id = ?
+                ORDER BY s.day_of_week, s.start_time
+            ", [$wsId]);
         }
         return Database::query("
             SELECT s.*, g.name as group_name, g.color_tag as group_color

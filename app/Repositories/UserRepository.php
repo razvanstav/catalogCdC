@@ -41,7 +41,7 @@ class UserRepository
 
     public function getAllUsers(): array
     {
-        return Database::query("SELECT id, email, role, first_name, last_name, phone, created_at FROM users ORDER BY role ASC, first_name ASC");
+        return Database::query("SELECT id, email, username, role, first_name, last_name, phone, created_at FROM users ORDER BY role ASC, first_name ASC");
     }
 
     public function createStudentUser(array $data): string
@@ -50,6 +50,7 @@ class UserRepository
         $studentId = 'stu_' . bin2hex(random_bytes(6));
         $now = date('Y-m-d H:i:s');
         $hash = password_hash($data['password'] ?: 'parola123', PASSWORD_DEFAULT);
+        $wsId = $data['workspace_id'] ?? (function_exists('workspace_id') ? workspace_id() : null) ?? 'ws_radu_teodorescu';
 
         Database::execute(
             "INSERT INTO users (id, email, password_hash, role, first_name, last_name, is_active, created_at, updated_at) VALUES (?, ?, ?, 'student', ?, ?, 1, ?, ?)",
@@ -57,8 +58,8 @@ class UserRepository
         );
 
         Database::execute(
-            "INSERT INTO student_profiles (id, user_id, workspace_id, first_name, last_name, email, phone, is_paid, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, 1, ?, ?)",
-            [$studentId, $userId, $data['first_name'], $data['last_name'], $data['email'], $data['phone'] ?? null, $now, $now]
+            "INSERT INTO student_profiles (id, user_id, workspace_id, first_name, last_name, email, phone, is_paid, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)",
+            [$studentId, $userId, $wsId, $data['first_name'], $data['last_name'], $data['email'], $data['phone'] ?? null, $now, $now]
         );
 
         if (!empty($data['group_id'])) {
@@ -87,9 +88,11 @@ class UserRepository
             [$userId, $email, $username ?: null, $hash, $data['first_name'], $data['last_name'], $data['phone'] ?? null, $now, $now]
         );
 
+        $wsId = $data['workspace_id'] ?? (function_exists('workspace_id') ? workspace_id() : null) ?? 'ws_radu_teodorescu';
+
         Database::execute(
-            "INSERT INTO student_profiles (id, user_id, workspace_id, first_name, last_name, email, phone, is_paid, private_notes, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, 1, ?, ?, ?)",
-            [$studentId, $userId, $data['first_name'], $data['last_name'], $email, $data['phone'] ?? null, $data['private_notes'] ?? null, $now, $now]
+            "INSERT INTO student_profiles (id, user_id, workspace_id, first_name, last_name, email, phone, is_paid, private_notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)",
+            [$studentId, $userId, $wsId, $data['first_name'], $data['last_name'], $email, $data['phone'] ?? null, $data['private_notes'] ?? null, $now, $now]
         );
 
         // Link parent if provided
@@ -119,8 +122,8 @@ class UserRepository
                 );
                 $rel = !empty($data['guardian_relationship']) ? trim($data['guardian_relationship']) : 'Părinte';
                 Database::execute(
-                    "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, phone, email, relationship, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, ?, ?, ?)",
-                    [$guardianProfileId, $guardianUserId, $gFirst, $gLast, $data['guardian_phone'] ?? null, $gEmail, $rel, $now, $now]
+                    "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, phone, email, relationship, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [$guardianProfileId, $guardianUserId, $wsId, $gFirst, $gLast, $data['guardian_phone'] ?? null, $gEmail, $rel, $now, $now]
                 );
             }
 
@@ -156,9 +159,11 @@ class UserRepository
             [$userId, $data['email'], $hash, $data['first_name'], $data['last_name'], $data['phone'] ?? null, $now, $now]
         );
 
+        $wsId = $data['workspace_id'] ?? (function_exists('workspace_id') ? workspace_id() : null) ?? 'ws_radu_teodorescu';
+
         Database::execute(
-            "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, email, phone, relationship, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, ?, ?, ?)",
-            [$guardianId, $userId, $data['first_name'], $data['last_name'], $data['email'], $data['phone'] ?? '', $data['relationship'] ?? 'Părinte', $now, $now]
+            "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, email, phone, relationship, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [$guardianId, $userId, $wsId, $data['first_name'], $data['last_name'], $data['email'], $data['phone'] ?? '', $data['relationship'] ?? 'Părinte', $now, $now]
         );
 
         if (!empty($data['student_id'])) {

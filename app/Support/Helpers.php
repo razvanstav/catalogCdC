@@ -56,6 +56,22 @@ if (!function_exists('auth_role')) {
     }
 }
 
+if (!function_exists('workspace_id')) {
+    function workspace_id(): ?string
+    {
+        $u = Session::user();
+        return $u['workspace_id'] ?? null;
+    }
+}
+
+if (!function_exists('workspace_name')) {
+    function workspace_name(): string
+    {
+        $u = Session::user();
+        return $u['workspace_name'] ?? 'Cabinet Didactic';
+    }
+}
+
 if (!function_exists('flash')) {
     function flash(string $key, $default = null)
     {

@@ -336,9 +336,10 @@ class TeacherController
                 [$uId, $gEmail, strtolower($gFirst . '.' . $gLast), password_hash('parinte123', PASSWORD_DEFAULT), $gFirst, $gLast, $guardianPhone ?: null, $now, $now]
             );
             $rel = trim(Request::input('relationship') ?? 'Părinte') ?: 'Părinte';
+            $wsId = (function_exists('workspace_id') ? workspace_id() : null) ?? 'ws_radu_teodorescu';
             \App\Support\Database::execute(
-                "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, phone, email, relationship, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, ?, ?, ?)",
-                [$gId, $uId, $gFirst, $gLast, $guardianPhone ?: null, $gEmail, $rel, $now, $now]
+                "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, phone, email, relationship, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [$gId, $uId, $wsId, $gFirst, $gLast, $guardianPhone ?: null, $gEmail, $rel, $now, $now]
             );
             $this->userRepo->linkGuardianToStudent($studentId, $gId);
             Session::flash('success', 'Părintele nou a fost înregistrat și asociat elevului!');
@@ -929,12 +930,19 @@ class TeacherController
     {
         $user = Session::user();
         $teacher = $this->userRepo->getTeacherProfile($user['id']);
+        $fullUser = $this->userRepo->findById($user['id']);
+        $ws = \App\Support\Database::queryOne("SELECT id, name FROM workspaces WHERE owner_id = ? LIMIT 1", [$user['id']]);
+        if (!$ws && !empty($user['workspace_id'])) {
+            $ws = \App\Support\Database::queryOne("SELECT id, name FROM workspaces WHERE id = ? LIMIT 1", [$user['workspace_id']]);
+        }
         $allUsers = $this->userRepo->getAllUsers();
         $groups = $this->groupRepo->all();
         $students = $this->studentRepo->all('teacher');
 
         View::render('teacher/settings', [
+            'user' => $fullUser ?: $user,
             'teacher' => $teacher,
+            'workspace' => $ws,
             'allUsers' => $allUsers,
             'groups' => $groups,
             'students' => $students,
@@ -945,14 +953,139 @@ class TeacherController
     {
         $user = Session::user();
         $teacher = $this->userRepo->getTeacherProfile($user['id']);
-        if ($teacher) {
-            $title = Request::input('title', $teacher['title']);
-            $phone = Request::input('phone', $teacher['phone']);
-            $bio = Request::input('bio', $teacher['bio']);
-            $this->userRepo->updateTeacherBio($teacher['id'], $title, $phone, $bio);
-            Session::flash('success', 'Profilul didactic a fost actualizat cu succes!');
+
+        $firstName = trim((string)Request::input('first_name'));
+        $lastName = trim((string)Request::input('last_name'));
+        $username = trim((string)Request::input('username'));
+        $email = trim((string)Request::input('email'));
+        $phone = trim((string)Request::input('phone'));
+        $title = trim((string)Request::input('title', $teacher['title'] ?? 'Profesor'));
+        $bio = trim((string)Request::input('bio', $teacher['bio'] ?? ''));
+        $workspaceName = trim((string)Request::input('workspace_name'));
+        $newPassword = trim((string)Request::input('new_password'));
+
+        if ($firstName && $lastName) {
+            $now = date('Y-m-d H:i:s');
+            
+            // 1. Update user
+            $userUpdates = [
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email ?: $user['email'],
+                'phone' => $phone ?: null,
+                'updated_at' => $now,
+                'id' => $user['id'],
+            ];
+            $sql = "UPDATE users SET first_name = :first_name, last_name = :last_name, email = :email, phone = :phone, updated_at = :updated_at";
+            if ($username !== '') {
+                $sql .= ", username = :username";
+                $userUpdates['username'] = $username;
+            }
+            if ($newPassword !== '') {
+                $sql .= ", password_hash = :password_hash";
+                $userUpdates['password_hash'] = password_hash($newPassword, PASSWORD_DEFAULT);
+            }
+            $sql .= " WHERE id = :id";
+            \App\Support\Database::execute($sql, $userUpdates);
+
+            // 2. Update teacher profile
+            if ($teacher) {
+                \App\Support\Database::execute(
+                    "UPDATE teacher_profiles SET title = ?, phone = ?, bio = ?, updated_at = ? WHERE id = ?",
+                    [$title ?: 'Profesor', $phone ?: null, $bio, $now, $teacher['id']]
+                );
+            }
+
+            // 3. Update workspace name
+            if ($workspaceName !== '') {
+                \App\Support\Database::execute(
+                    "UPDATE workspaces SET name = ?, updated_at = ? WHERE owner_id = ? OR id = ?",
+                    [$workspaceName, $now, $user['id'], $user['workspace_id'] ?? '']
+                );
+            }
+
+            // 4. Update session
+            $updatedUser = $this->userRepo->findById($user['id']);
+            if ($updatedUser) {
+                $sessionUser = Session::user();
+                $sessionUser['first_name'] = $updatedUser['first_name'];
+                $sessionUser['last_name'] = $updatedUser['last_name'];
+                $sessionUser['email'] = $updatedUser['email'];
+                $sessionUser['phone'] = $updatedUser['phone'];
+                $sessionUser['title'] = $title ?: ($sessionUser['title'] ?? 'Profesor');
+                if ($workspaceName !== '') {
+                    $sessionUser['workspace_name'] = $workspaceName;
+                }
+                Session::setUser($sessionUser);
+            }
+
+            Session::flash('success', 'Toate datele tale de profesor și ale cabinetului didactic au fost actualizate cu succes!');
+        } else {
+            Session::flash('error', 'Numele și prenumele sunt obligatorii.');
         }
-        Response::redirect('/teacher/settings');
+
+        Response::redirect('/teacher/settings#profile');
+    }
+
+    public function createTeacherAccount(): void
+    {
+        $firstName = trim((string)Request::input('first_name'));
+        $lastName = trim((string)Request::input('last_name'));
+        $username = trim((string)Request::input('username'));
+        $email = trim((string)Request::input('email'));
+        $phone = trim((string)Request::input('phone'));
+        $password = trim((string)Request::input('password', 'parola123'));
+        $title = trim((string)Request::input('title', 'Profesor'));
+        $workspaceName = trim((string)Request::input('workspace_name'));
+
+        if ($firstName && $lastName) {
+            if (!$username) {
+                $username = strtolower($firstName . '.' . $lastName);
+            }
+            if (!$email) {
+                $email = strtolower($firstName . '.' . $lastName) . '@indrumar.ro';
+            }
+            if (!$workspaceName) {
+                $workspaceName = "Cabinet Didactic — Prof. {$firstName} {$lastName}";
+            }
+
+            $existing = \App\Support\Database::queryOne("SELECT id FROM users WHERE email = ? OR username = ?", [$email, $username]);
+            if ($existing) {
+                Session::flash('error', 'Există deja un utilizator cu acest nume sau e-mail.');
+                Response::redirect('/teacher/settings#accounts');
+                return;
+            }
+
+            $newUserId = 'usr_teacher_' . bin2hex(random_bytes(5));
+            $now = date('Y-m-d H:i:s');
+            $hash = password_hash($password ?: 'parola123', PASSWORD_DEFAULT);
+
+            // 1. Inserare utilizator nou cu rol profesor
+            \App\Support\Database::execute(
+                "INSERT INTO users (id, email, username, password_hash, role, first_name, last_name, phone, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, 'teacher', ?, ?, ?, 1, ?, ?)",
+                [$newUserId, $email, $username, $hash, $firstName, $lastName, $phone ?: null, $now, $now]
+            );
+
+            // 2. Creare workspace curat de la zero dedicat acestui profesor
+            $newWsId = 'ws_' . bin2hex(random_bytes(6));
+            \App\Support\Database::execute(
+                "INSERT INTO workspaces (id, name, owner_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                [$newWsId, $workspaceName, $newUserId, $now, $now]
+            );
+
+            // 3. Creare profil profesor
+            $newProfileId = 'tch_' . bin2hex(random_bytes(6));
+            \App\Support\Database::execute(
+                "INSERT INTO teacher_profiles (id, user_id, title, phone, bio, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [$newProfileId, $newUserId, $title ?: 'Profesor', $phone ?: null, 'Cabinet didactic.', $now, $now]
+            );
+
+            Session::flash('success', "Profesorul nou {$firstName} {$lastName} a fost adăugat cu succes! Are propriul cabinet didactic curat de la zero (Login: {$username}, Parolă: {$password}).");
+        } else {
+            Session::flash('error', 'Te rugăm să completezi numele și prenumele noului profesor.');
+        }
+
+        Response::redirect('/teacher/settings#accounts');
     }
 
     public function createStudentAccount(): void

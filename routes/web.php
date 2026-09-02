@@ -70,6 +70,7 @@ Router::get('/teacher/reports', 'TeacherController@reports', ['teacher']);
 Router::get('/teacher/settings', 'TeacherController@settings', ['teacher']);
 Router::post('/teacher/settings', 'TeacherController@updateSettings', ['teacher', 'csrf']);
 Router::post('/teacher/settings/toggle-vacation', 'TeacherController@toggleVacationMode', ['teacher', 'csrf']);
+Router::post('/teacher/settings/create-teacher-account', 'TeacherController@createTeacherAccount', ['teacher', 'csrf']);
 Router::post('/teacher/settings/create-student-account', 'TeacherController@createStudentAccount', ['teacher', 'csrf']);
 Router::post('/teacher/settings/create-parent-account', 'TeacherController@createParentAccount', ['teacher', 'csrf']);
 Router::post('/teacher/settings/reset-password', 'TeacherController@resetPassword', ['teacher', 'csrf']);

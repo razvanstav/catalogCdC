@@ -105,6 +105,16 @@ class AttendanceRepository
                 ORDER BY l.lesson_date DESC, l.start_time DESC
             ", [$groupId]);
         }
+        $wsId = function_exists('workspace_id') ? workspace_id() : null;
+        if ($wsId) {
+            return Database::query("
+                SELECT l.*, g.name as group_name, g.color_tag as group_color
+                FROM lessons l
+                INNER JOIN groups g ON l.group_id = g.id
+                WHERE g.workspace_id = ?
+                ORDER BY l.lesson_date DESC, l.start_time DESC
+            ", [$wsId]);
+        }
         return Database::query("
             SELECT l.*, g.name as group_name, g.color_tag as group_color
             FROM lessons l
@@ -127,6 +137,32 @@ class AttendanceRepository
     public function getRecentChronologicalLessons(int $limit = 6): array
     {
         $today = date('Y-m-d');
+        $wsId = function_exists('workspace_id') ? workspace_id() : null;
+        if ($wsId) {
+            $past = Database::query("
+                SELECT l.*, g.name as group_name, g.color_tag as group_color
+                FROM lessons l
+                INNER JOIN groups g ON l.group_id = g.id
+                WHERE l.lesson_date <= ? AND g.workspace_id = ?
+                ORDER BY l.lesson_date DESC, l.start_time DESC
+                LIMIT ?
+            ", [$today, $wsId, $limit]);
+
+            if (count($past) < $limit) {
+                $remaining = $limit - count($past);
+                $upcoming = Database::query("
+                    SELECT l.*, g.name as group_name, g.color_tag as group_color
+                    FROM lessons l
+                    INNER JOIN groups g ON l.group_id = g.id
+                    WHERE l.lesson_date > ? AND g.workspace_id = ?
+                    ORDER BY l.lesson_date ASC, l.start_time ASC
+                    LIMIT ?
+                ", [$today, $wsId, $remaining]);
+                return array_merge($past, $upcoming);
+            }
+            return $past;
+        }
+
         // Retrieve lessons that just took place (past/today) first, then upcoming if needed
         $past = Database::query("
             SELECT l.*, g.name as group_name, g.color_tag as group_color

@@ -6,11 +6,16 @@ use App\Support\Database;
 
 class StudentRepository
 {
-    public function all(string $role = 'teacher'): array
+    public function all(string $role = 'teacher', ?string $workspaceId = null): array
     {
         $fields = ($role === 'teacher')
             ? "id, user_id, workspace_id, first_name, last_name, father_initial, email, phone, date_of_birth, is_paid, private_notes, created_at"
             : "id, user_id, workspace_id, first_name, last_name, father_initial, email, phone, date_of_birth, is_paid, NULL as private_notes, created_at";
+
+        $wsId = $workspaceId ?? ($role === 'teacher' && function_exists('workspace_id') ? workspace_id() : null);
+        if ($wsId) {
+            return Database::query("SELECT $fields FROM student_profiles WHERE workspace_id = ? ORDER BY first_name ASC, last_name ASC", [$wsId]);
+        }
 
         return Database::query("SELECT $fields FROM student_profiles ORDER BY first_name ASC, last_name ASC");
     }
@@ -150,12 +155,13 @@ class StudentRepository
     {
         $id = 'stu_' . bin2hex(random_bytes(6));
         $now = date('Y-m-d H:i:s');
+        $wsId = $data['workspace_id'] ?? (function_exists('workspace_id') ? workspace_id() : null) ?? 'ws_radu_teodorescu';
         Database::execute(
             "INSERT INTO student_profiles (id, user_id, workspace_id, first_name, last_name, father_initial, email, phone, is_paid, private_notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 $id,
                 $data['user_id'] ?? null,
-                $data['workspace_id'] ?? 'ws_radu_teodorescu',
+                $wsId,
                 $data['first_name'],
                 $data['last_name'],
                 $data['father_initial'] ?? null,

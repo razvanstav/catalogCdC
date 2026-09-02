@@ -61,6 +61,27 @@ class AuthService
             $prof = $this->userRepo->getTeacherProfile($user['id']);
             $sessionData['teacher_id'] = $prof['id'] ?? null;
             $sessionData['title'] = $prof['title'] ?? 'Profesor';
+
+            // Find or associate workspace for this teacher
+            $ws = \App\Support\Database::queryOne("SELECT id, name FROM workspaces WHERE owner_id = ? LIMIT 1", [$user['id']]);
+            if (!$ws) {
+                $firstWs = \App\Support\Database::queryOne("SELECT id, name FROM workspaces WHERE owner_id = 'usr_teacher_radu' OR id = 'ws_radu_teodorescu' LIMIT 1");
+                if ($firstWs && ($user['id'] === 'usr_teacher_radu' || ($user['username'] ?? '') === 'profesor')) {
+                    $ws = $firstWs;
+                    \App\Support\Database::execute("UPDATE workspaces SET owner_id = ? WHERE id = ?", [$user['id'], $ws['id']]);
+                } else {
+                    $wsId = 'ws_' . bin2hex(random_bytes(6));
+                    $wsName = 'Cabinet Didactic — Prof. ' . $user['first_name'] . ' ' . $user['last_name'];
+                    $now = date('Y-m-d H:i:s');
+                    \App\Support\Database::execute(
+                        "INSERT INTO workspaces (id, name, owner_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                        [$wsId, $wsName, $user['id'], $now, $now]
+                    );
+                    $ws = ['id' => $wsId, 'name' => $wsName];
+                }
+            }
+            $sessionData['workspace_id'] = $ws['id'] ?? null;
+            $sessionData['workspace_name'] = $ws['name'] ?? 'Cabinet Didactic';
         } elseif ($user['role'] === 'parent') {
             $guardian = $this->userRepo->getGuardianProfile($user['id']);
             $sessionData['guardian_id'] = $guardian['id'] ?? null;
