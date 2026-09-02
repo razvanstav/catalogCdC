@@ -117,7 +117,7 @@
                 <div class="content-row__main">
                   <div class="content-row__title">
                     <?= e($guardian['first_name'] . ' ' . $guardian['last_name']) ?>
-                    <span class="badge badge--neutral"><?= e($guardian['relationship'] ?: 'Părinte') ?></span>
+                    <span class="badge badge--neutral"><?= e(guardian_relationship_label($guardian['relationship'] ?? '')) ?></span>
                   </div>
                   <div class="content-row__meta">
                     <strong>📞 <?= e($guardian['phone'] ?: 'Fără telefon consemnat') ?></strong>
@@ -247,7 +247,7 @@
 
         <div class="form-group">
           <label class="form-label" for="g_rel_<?= e($gid) ?>">Relație / Calitate</label>
-          <input type="text" id="g_rel_<?= e($gid) ?>" name="relationship" class="form-control" value="<?= e($guardian['relationship'] ?? 'Părinte') ?>" placeholder="Mamă, Tată, Tutore">
+          <input type="text" id="g_rel_<?= e($gid) ?>" name="relationship" class="form-control" value="<?= e(guardian_relationship_label($guardian['relationship'] ?? 'Părinte')) ?>" placeholder="Mamă, Tată, Tutore">
         </div>
 
         <div class="modal-actions">
@@ -292,6 +292,15 @@
             <label class="form-label" for="assoc_guardian_phone">Telefon părinte</label>
             <input type="tel" id="assoc_guardian_phone" name="guardian_phone" class="form-control" placeholder="07xx xxx xxx">
           </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="assoc_guardian_rel">Relație / Calitate</label>
+          <select id="assoc_guardian_rel" name="relationship" class="form-control">
+            <option value="Mamă">Mamă</option>
+            <option value="Tată">Tată</option>
+            <option value="Părinte" selected>Părinte</option>
+            <option value="Tutore">Tutore legal</option>
+          </select>
         </div>
       </div>
 

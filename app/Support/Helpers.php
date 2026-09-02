@@ -137,6 +137,33 @@ if (!function_exists('group_type_label')) {
     }
 }
 
+if (!function_exists('guardian_relationship_label')) {
+    function guardian_relationship_label(?string $relationship): string
+    {
+        $rel = trim(strtolower((string)$relationship));
+        switch ($rel) {
+            case 'mother':
+            case 'mama':
+            case 'mamă':
+                return 'Mamă';
+            case 'father':
+            case 'tata':
+            case 'tată':
+                return 'Tată';
+            case 'legal_guardian':
+            case 'legal guardian':
+            case 'guardian':
+            case 'parent':
+            case 'parinte':
+            case 'părinte':
+            case '':
+                return 'Părinte';
+            default:
+                return ucfirst((string)$relationship);
+        }
+    }
+}
+
 if (!function_exists('feedback_category_label')) {
     function feedback_category_label(string $category): string
     {

@@ -96,6 +96,15 @@
             <label class="form-label" for="guardian_phone">Telefon părinte</label>
             <input type="tel" id="guardian_phone" name="guardian_phone" class="form-control" placeholder="07xx xxx xxx">
           </div>
+          <div class="form-group">
+            <label class="form-label" for="guardian_relationship">Relație / Calitate</label>
+            <select id="guardian_relationship" name="guardian_relationship" class="form-control">
+              <option value="Mamă">Mamă</option>
+              <option value="Tată">Tată</option>
+              <option value="Părinte" selected>Părinte</option>
+              <option value="Tutore">Tutore legal</option>
+            </select>
+          </div>
         </div>
       </div>
 

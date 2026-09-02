@@ -117,9 +117,10 @@ class UserRepository
                     "INSERT INTO users (id, email, username, password_hash, role, first_name, last_name, phone, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, 'parent', ?, ?, ?, 1, ?, ?)",
                     [$guardianUserId, $gEmail, strtolower($gFirst . '.' . $gLast), $gHash, $gFirst, $gLast, $data['guardian_phone'] ?? null, $now, $now]
                 );
+                $rel = !empty($data['guardian_relationship']) ? trim($data['guardian_relationship']) : 'Părinte';
                 Database::execute(
-                    "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, phone, email, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, ?, ?)",
-                    [$guardianProfileId, $guardianUserId, $gFirst, $gLast, $data['guardian_phone'] ?? null, $gEmail, $now, $now]
+                    "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, phone, email, relationship, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, ?, ?, ?)",
+                    [$guardianProfileId, $guardianUserId, $gFirst, $gLast, $data['guardian_phone'] ?? null, $gEmail, $rel, $now, $now]
                 );
             }
 
@@ -157,7 +158,7 @@ class UserRepository
 
         Database::execute(
             "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, email, phone, relationship, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, ?, ?, ?)",
-            [$guardianId, $userId, $data['first_name'], $data['last_name'], $data['email'], $data['phone'] ?? '', $data['relationship'] ?? 'legal_guardian', $now, $now]
+            [$guardianId, $userId, $data['first_name'], $data['last_name'], $data['email'], $data['phone'] ?? '', $data['relationship'] ?? 'Părinte', $now, $now]
         );
 
         if (!empty($data['student_id'])) {

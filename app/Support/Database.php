@@ -223,7 +223,7 @@ class Database
             last_name TEXT NOT NULL,
             email TEXT NOT NULL,
             phone TEXT NOT NULL,
-            relationship TEXT DEFAULT 'legal_guardian',
+            relationship TEXT DEFAULT 'Părinte',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );

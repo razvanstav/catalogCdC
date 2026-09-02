@@ -243,6 +243,7 @@ class TeacherController
                 'guardian_id' => $guardianId ?: null,
                 'guardian_name' => $guardianName ?: null,
                 'guardian_phone' => $guardianPhone ?: null,
+                'guardian_relationship' => trim(Request::input('guardian_relationship') ?? 'Părinte') ?: 'Părinte',
                 'group_id' => $groupId ?: null,
                 'private_notes' => $notes,
             ]);
@@ -334,9 +335,10 @@ class TeacherController
                 "INSERT INTO users (id, email, username, password_hash, role, first_name, last_name, phone, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, 'parent', ?, ?, ?, 1, ?, ?)",
                 [$uId, $gEmail, strtolower($gFirst . '.' . $gLast), password_hash('parinte123', PASSWORD_DEFAULT), $gFirst, $gLast, $guardianPhone ?: null, $now, $now]
             );
+            $rel = trim(Request::input('relationship') ?? 'Părinte') ?: 'Părinte';
             \App\Support\Database::execute(
-                "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, phone, email, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, ?, ?)",
-                [$gId, $uId, $gFirst, $gLast, $guardianPhone ?: null, $gEmail, $now, $now]
+                "INSERT INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, phone, email, relationship, created_at, updated_at) VALUES (?, ?, 'ws_radu_teodorescu', ?, ?, ?, ?, ?, ?, ?)",
+                [$gId, $uId, $gFirst, $gLast, $guardianPhone ?: null, $gEmail, $rel, $now, $now]
             );
             $this->userRepo->linkGuardianToStudent($studentId, $gId);
             Session::flash('success', 'Părintele nou a fost înregistrat și asociat elevului!');
@@ -984,7 +986,7 @@ class TeacherController
         $password = Request::input('password', 'parola123');
         $studentId = Request::input('student_id');
         $phone = Request::input('phone');
-        $relationship = Request::input('relationship', 'legal_guardian');
+        $relationship = Request::input('relationship', 'Părinte');
 
         if ($firstName && $lastName && $email) {
             $this->userRepo->createParentUser([

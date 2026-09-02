@@ -59,8 +59,8 @@ class DemoSeeder
 
         // 5. Guardians
         $guardians = [
-            ['grd_radu_popescu', 'usr_guardian_radu_popescu', 'ws_radu_teodorescu', 'Radu', 'Popescu', 'radu.popescu@familie.ro', '0722334455', 'father', $now, $now],
-            ['grd_cristina_ionescu', 'usr_guardian_cristina_ionescu', 'ws_radu_teodorescu', 'Cristina', 'Ionescu', 'cristina.ionescu@familie.ro', '0722445566', 'mother', $now, $now],
+            ['grd_radu_popescu', 'usr_guardian_radu_popescu', 'ws_radu_teodorescu', 'Radu', 'Popescu', 'radu.popescu@familie.ro', '0722334455', 'Tată', $now, $now],
+            ['grd_cristina_ionescu', 'usr_guardian_cristina_ionescu', 'ws_radu_teodorescu', 'Cristina', 'Ionescu', 'cristina.ionescu@familie.ro', '0722445566', 'Mamă', $now, $now],
         ];
         $stmt = $pdo->prepare("INSERT OR IGNORE INTO guardian_profiles (id, user_id, workspace_id, first_name, last_name, email, phone, relationship, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         foreach ($guardians as $g) {
